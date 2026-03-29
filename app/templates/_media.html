@@ -1,0 +1,17 @@
+{# Reusable media macro — include this in any template #}
+{# Usage: {% include '_media.html' %} with post in context #}
+{% if post.image_url %}
+  <div class="media-wrap">
+    {% if post.media_type == 'video' %}
+      <video class="media-video" controls preload="metadata"
+             style="max-height:420px;width:100%;background:#000;">
+        <source src="{{ post.image_url }}">
+        Your browser does not support this video format.
+      </video>
+    {% else %}
+      <img class="media-img" src="{{ post.image_url }}" alt=""
+           onclick="openLightbox(this.src)"
+           onerror="this.parentElement.style.display='none'"/>
+    {% endif %}
+  </div>
+{% endif %}

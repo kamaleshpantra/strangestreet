@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Connections — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:760px;margin:0 auto;">
+  <h1 style="font-family:var(--font-h);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:4px;">Connections</h1>
+  <p style="font-size:13px;color:var(--text3);margin-bottom:20px;">Manage your stranger connections</p>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="showTab('pending')">Requests ({{ pending|length }})</div>
+    <div class="tab" onclick="showTab('sent')">Sent ({{ sent|length }})</div>
+    <div class="tab" onclick="showTab('active')">Active ({{ active|length }})</div>
+  </div>
+
+  <!-- Pending Requests -->
+  <div id="tab-pending" class="tab-content">
+    {% if pending %}
+      {% for conn in pending %}
+      <div class="card card-p" style="margin-bottom:10px;display:flex;align-items:center;gap:14px;" id="conn-{{ conn.id }}">
+        <a href="/discover/profile/{{ conn.requester.id }}" class="av" style="width:48px;height:48px;font-size:18px;background:linear-gradient(135deg,var(--red-dim),var(--bg3));">
+          {{ conn.requester.alias_name[0] if conn.requester.alias_name else '?' }}
+        </a>
+        <div style="flex:1;min-width:0;">
+          <a href="/discover/profile/{{ conn.requester.id }}" style="font-family:var(--font-h);font-size:14px;font-weight:600;">
+            {{ conn.requester.alias_name or 'Unknown' }}
+          </a>
+          {% if conn.requester.alias_bio %}
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ conn.requester.alias_bio[:60] }}</div>
+          {% endif %}
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button onclick="acceptConn({{ conn.id }})" class="btn-success" style="font-size:11px;padding:5px 12px;">Accept</button>
+          <button onclick="rejectConn({{ conn.id }})" class="btn-danger" style="font-size:11px;padding:5px 12px;">Reject</button>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="card card-p empty"><div class="empty-icon">📬</div><div class="empty-title">No pending requests</div></div>
+    {% endif %}
+  </div>
+
+  <!-- Sent Requests -->
+  <div id="tab-sent" class="tab-content" style="display:none;">
+    {% if sent %}
+      {% for conn in sent %}
+      <div class="card card-p" style="margin-bottom:10px;display:flex;align-items:center;gap:14px;">
+        <a href="/discover/profile/{{ conn.requested.id }}" class="av" style="width:48px;height:48px;font-size:18px;">
+          {{ conn.requested.alias_name[0] if conn.requested.alias_name else '?' }}
+        </a>
+        <div style="flex:1;">
+          <a href="/discover/profile/{{ conn.requested.id }}" style="font-family:var(--font-h);font-size:14px;font-weight:600;">
+            {{ conn.requested.alias_name or 'Unknown' }}
+          </a>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px;">
+            Sent {{ conn.created_at.strftime('%b %d, %Y') if conn.created_at else '' }}
+          </div>
+        </div>
+        <span class="flair neutral">Pending</span>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="card card-p empty"><div class="empty-icon">📤</div><div class="empty-title">No sent requests</div></div>
+    {% endif %}
+  </div>
+
+  <!-- Active Connections -->
+  <div id="tab-active" class="tab-content" style="display:none;">
+    {% if active %}
+      {% for data in active %}
+      <div class="card card-p" style="margin-bottom:10px;display:flex;align-items:center;gap:14px;">
+        <div class="av" style="width:48px;height:48px;font-size:18px;background:linear-gradient(135deg,var(--green),#047857) !important;border-color:rgba(34,197,94,0.3) !important;color:#fff !important;">
+          {% if data.other_reveal_level >= 3 and data.other.avatar_url %}
+            <img src="{{ data.other.avatar_url }}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;"/>
+          {% elif data.other_reveal_level >= 2 %}
+            {{ data.other.display_name[0] }}
+          {% else %}
+            {{ data.other.alias_name[0] if data.other.alias_name else '?' }}
+          {% endif %}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--font-h);font-size:14px;font-weight:600;">
+            {% if data.other_reveal_level >= 2 %}
+              {{ data.other.display_name }} <span style="font-size:11px;color:var(--text3);">(@{{ data.other.username }})</span>
+            {% else %}
+              {{ data.other.alias_name or 'Unknown' }}
+            {% endif %}
+          </div>
+          {% if data.other_reveal_level >= 1 and data.other.bio %}
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ data.other.bio[:60] }}</div>
+          {% elif data.other.alias_bio %}
+          <div style="font-size:12px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ data.other.alias_bio[:60] }}</div>
+          {% endif %}
+          <div style="display:flex;gap:4px;margin-top:4px;">
+            <span class="flair {% if data.other_reveal_level >= 1 %}green{% else %}neutral{% endif %}" style="font-size:9px;">Bio</span>
+            <span class="flair {% if data.other_reveal_level >= 2 %}green{% else %}neutral{% endif %}" style="font-size:9px;">Name</span>
+            <span class="flair {% if data.other_reveal_level >= 3 %}green{% else %}neutral{% endif %}" style="font-size:9px;">Photo</span>
+          </div>
+        </div>
+        <a href="/messages/c/{{ data.connection.id }}" class="btn-primary" style="font-size:12px;padding:6px 14px;">💬 Chat</a>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="card card-p empty">
+        <div class="empty-icon">🌐</div>
+        <div class="empty-title">No active connections yet</div>
+        <div class="empty-sub" style="margin-top:8px;">
+          <a href="/discover" class="btn-primary" style="font-size:13px;">Discover Strangers</a>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display='none');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).style.display='block';
+  event.target.classList.add('active');
+}
+async function acceptConn(id) {
+  await fetch(`/connections/${id}/accept`, {method:'POST'});
+  document.getElementById('conn-'+id).remove();
+}
+async function rejectConn(id) {
+  await fetch(`/connections/${id}/reject`, {method:'POST'});
+  document.getElementById('conn-'+id).remove();
+}
+</script>
+{% endblock %}

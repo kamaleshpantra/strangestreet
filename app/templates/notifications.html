@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Notifications — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:680px;margin:0 auto;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <h1 style="font-family:var(--font-h);font-size:24px;font-weight:800;letter-spacing:-0.5px;">Notifications</h1>
+  </div>
+
+  {% if notifications %}
+  <div class="card" style="overflow:hidden;">
+    {% for n in notifications %}
+    <div class="notif-item {% if not n.is_read %}unread{% endif %}">
+      <div class="notif-icon {{ n.type }}">
+        {% if n.type == 'like' %}❤️
+        {% elif n.type == 'comment' %}💬
+        {% elif n.type == 'follow' %}👤
+        {% elif n.type == 'connection' %}🤝
+        {% elif n.type == 'message' %}✉️
+        {% elif n.type == 'reaction' %}🔥
+        {% elif n.type == 'reveal' %}🎭
+        {% elif n.type == 'zone_invite' %}🏘️
+        {% else %}🔔
+        {% endif %}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;color:var(--text);">
+          {{ n.message or n.type.replace('_',' ').title() }}
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--font-m);">
+          {{ n.created_at.strftime('%b %d, %I:%M %p') if n.created_at else '' }}
+        </div>
+      </div>
+      {% if n.reference_type == 'post' %}
+        <a href="/posts/{{ n.reference_id }}" class="btn-ghost" style="font-size:11px;padding:4px 10px;">View</a>
+      {% elif n.reference_type == 'connection' %}
+        <a href="/connections" class="btn-ghost" style="font-size:11px;padding:4px 10px;">View</a>
+      {% elif n.reference_type == 'user' and n.type == 'follow' %}
+        <a href="/users/{{ n.actor.username if n.actor else '' }}" class="btn-ghost" style="font-size:11px;padding:4px 10px;">View</a>
+      {% elif n.reference_type == 'user' and n.type == 'message' %}
+        <a href="/messages" class="btn-ghost" style="font-size:11px;padding:4px 10px;">View</a>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card card-p empty">
+    <div class="empty-icon">🔔</div>
+    <div class="empty-title">No notifications yet</div>
+    <div class="empty-sub">When people interact with you, you'll see it here</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

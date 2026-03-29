@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block title %}{{ profile_user.display_name }} — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:860px;margin:0 auto;">
+  <div class="card" style="overflow:hidden;margin-bottom:16px;">
+    <div style="height:90px;background:linear-gradient(135deg,#1a0404 0%,#0d0d0d 50%,#0a0a12 100%);position:relative;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 30px,rgba(220,38,38,0.04) 30px,rgba(220,38,38,0.04) 31px);"></div>
+    </div>
+    <div style="padding:0 20px 20px;position:relative;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:-28px;margin-bottom:14px;">
+        {% if profile_user.avatar_url %}
+          <img src="{{ profile_user.avatar_url }}" alt=""
+               style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid var(--bg2);cursor:zoom-in;"
+               onclick="openLightbox(this.src)"/>
+        {% else %}
+          <div class="av" style="width:72px;height:72px;font-size:28px;border:3px solid var(--bg2);">{{ profile_user.display_name[0] }}</div>
+        {% endif %}
+        <div style="display:flex;gap:8px;padding-bottom:4px;">
+          {% if user %}
+            {% if user.username == profile_user.username %}
+              <a href="/users/{{ user.username }}/edit" class="btn-ghost" style="font-size:12px;">Edit profile</a>
+            {% else %}
+              <a href="/messages/public/{{ profile_user.username }}" class="btn-ghost" style="font-size:12px;">💬 Message</a>
+              <button onclick="followUser('{{ profile_user.username }}',this)"
+                      class="btn-follow {% if is_following %}on{% endif %}" id="follow-btn">
+                {{ 'Following' if is_following else 'Follow' }}
+              </button>
+            {% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:6px;">
+        <h1 style="font-family:var(--font-h);font-size:20px;font-weight:700;letter-spacing:-0.3px;">{{ profile_user.display_name }}</h1>
+        {% if profile_user.is_verified %}<span class="verified" title="Verified">✓</span>{% endif %}
+      </div>
+      <div style="font-family:var(--font-m);font-size:12px;color:var(--text3);margin-top:2px;margin-bottom:8px;">u/{{ profile_user.username }}</div>
+      {% if profile_user.bio %}<p style="font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:12px;max-width:500px;">{{ profile_user.bio }}</p>{% endif %}
+
+      <!-- Badges -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+        {% if profile_user.relationship_status %}
+          {% set rs = profile_user.relationship_status %}
+          {% if rs == 'single' %}<span class="rel" style="background:rgba(34,197,94,0.08);color:#4ade80;border:1px solid rgba(34,197,94,0.2);">Single</span>
+          {% elif rs == 'in_relationship' %}<span class="rel" style="background:rgba(220,38,38,0.08);color:var(--red3);border:1px solid var(--red-dim);">In a relationship</span>
+          {% elif rs == 'married' %}<span class="rel" style="background:rgba(212,168,83,0.08);color:var(--gold);border:1px solid rgba(212,168,83,0.25);">Married</span>
+          {% elif rs == 'engaged' %}<span class="rel" style="background:rgba(168,85,247,0.08);color:#c084fc;border:1px solid rgba(168,85,247,0.25);">Engaged</span>
+          {% elif rs == 'its_complicated' %}<span class="rel" style="background:rgba(251,146,60,0.08);color:#fb923c;border:1px solid rgba(251,146,60,0.25);">It's complicated</span>
+          {% elif rs == 'open_relationship' %}<span class="rel" style="background:rgba(6,182,212,0.08);color:#22d3ee;border:1px solid rgba(6,182,212,0.2);">Open relationship</span>
+          {% else %}<span class="rel" style="background:var(--bg4);color:var(--text3);border:1px solid var(--border);">{{ rs.replace('_',' ').title() }}</span>
+          {% endif %}
+        {% endif %}
+        <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);">Joined {{ profile_user.created_at.strftime('%b %Y') if profile_user.created_at else '' }}</span>
+      </div>
+
+      <!-- Interests -->
+      {% if profile_user.interests %}
+      <div class="pills-wrap" style="margin-bottom:14px;">
+        {% for i in profile_user.interests[:12] %}
+        <span class="pill" style="font-size:10px;padding:2px 8px;">
+          <span class="pill-icon">{{ i.icon }}</span>{{ i.name }}
+        </span>
+        {% endfor %}
+        {% if profile_user.interests|length > 12 %}
+        <span class="pill" style="font-size:10px;padding:2px 8px;">+{{ profile_user.interests|length - 12 }} more</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Zones -->
+      {% if memberships %}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;">
+        {% for m in memberships[:5] %}
+        <a href="/zones/{{ m.zone.slug }}" class="flair purple" style="font-size:9px;">z/{{ m.zone.name }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <div class="stat-row">
+        <div class="stat"><div class="stat-val">{{ post_count }}</div><div class="stat-lbl">Posts</div></div>
+        <div class="stat"><div class="stat-val" id="fol-count">{{ follower_count }}</div><div class="stat-lbl">Followers</div></div>
+        <div class="stat"><div class="stat-val">{{ following_count }}</div><div class="stat-lbl">Following</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-head">Posts</div>
+  {% if posts %}
+    {% for post in posts %}
+    <div class="post" style="margin-bottom:10px;">
+      <div class="post-vote"><span class="v-count">{{ post.liked_by|length }}</span></div>
+      <div class="post-body">
+        <div class="post-meta">
+          <span class="post-time">{{ post.created_at.strftime('%B %d, %Y') if post.created_at else '' }}</span>
+          {% if post.category and post.category != 'general' %}<span class="flair">{{ post.category }}</span>{% endif %}
+        </div>
+        <div class="post-title"><a href="/posts/{{ post.id }}">{{ post.content[:140] }}{% if post.content|length > 140 %}…{% endif %}</a></div>
+        {% if post.image_url %}
+        <div class="media-wrap" style="margin-top:8px;">
+          {% if post.media_type == 'video' %}
+            <video class="media-video" controls preload="metadata" style="max-height:220px;"><source src="{{ post.image_url }}"></video>
+          {% else %}
+            <img class="media-img" src="{{ post.image_url }}" alt="" onclick="openLightbox(this.src)" onerror="this.parentElement.style.display='none'" style="max-height:220px;"/>
+          {% endif %}
+        </div>
+        {% endif %}
+        <div class="post-actions">
+          <a href="/posts/{{ post.id }}#comments" class="act-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            {{ post.comments|length }}
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="card card-p empty"><div class="empty-icon">📭</div><div class="empty-title">No posts yet</div></div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function followUser(u,btn){const r=await fetch(`/users/${u}/follow`,{method:'POST'});const d=await r.json();btn.textContent=d.following?'Following':'Follow';btn.classList.toggle('on',d.following);document.getElementById('fol-count').textContent=d.follower_count;}
+</script>
+{% endblock %}

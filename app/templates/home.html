@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+{% block title %}Strange Street — Feed{% endblock %}
+{% block content %}
+<div class="two-col">
+  <div>
+    <!-- Story Bar -->
+    {% include "story_bar.html" %}
+
+    <!-- Compose -->
+    <a href="/posts/create" style="display:block;margin-bottom:16px;">
+      <div class="compose">
+        {% if user.avatar_url %}
+          <img src="{{ user.avatar_url }}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt=""/>
+        {% else %}
+          <div class="av" style="width:36px;height:36px;font-size:14px;">{{ user.display_name[0] }}</div>
+        {% endif %}
+        <div class="compose-inp">What's strange today, {{ user.display_name }}?</div>
+        <button class="btn-primary" style="flex-shrink:0;">+ Post</button>
+      </div>
+    </a>
+
+    <!-- Filter bar -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="cat-bar" style="margin-bottom:0;">
+        <button class="cat-btn on" onclick="filterCat(this,'all')">All</button>
+        <button class="cat-btn" onclick="filterCat(this,'technology')">Tech</button>
+        <button class="cat-btn" onclick="filterCat(this,'sports')">Sports</button>
+        <button class="cat-btn" onclick="filterCat(this,'science')">Science</button>
+        <button class="cat-btn" onclick="filterCat(this,'gaming')">Gaming</button>
+        <button class="cat-btn" onclick="filterCat(this,'food')">Food</button>
+        <button class="cat-btn" onclick="filterCat(this,'music')">Music</button>
+      </div>
+      <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);white-space:nowrap;">{{ posts|length }} posts</span>
+    </div>
+
+    {% if posts %}
+      {% for post in posts %}
+      <div class="post" style="margin-bottom:10px;" data-cat="{{ post.category or 'general' }}">
+        <div class="post-vote">
+          <button class="v-btn" onclick="likePost({{ post.id }},this)" title="Like">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+          <span class="v-count" id="lc-{{ post.id }}">{{ post.liked_by|length }}</span>
+        </div>
+        <div class="post-body">
+          <div class="post-meta">
+            <a href="/users/{{ post.author.username }}" class="post-author">
+              {% if post.author.avatar_url %}
+                <img src="{{ post.author.avatar_url }}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" alt=""/>
+              {% else %}
+                <div class="av" style="width:20px;height:20px;font-size:8px;">{{ post.author.display_name[0] }}</div>
+              {% endif %}
+              <strong>{{ post.author.display_name }}</strong>
+              <span style="color:var(--text3);">·</span>
+              <span style="color:var(--text3);font-size:11px;">u/{{ post.author.username }}</span>
+            </a>
+            <span class="post-time">{{ post.created_at.strftime('%b %d') if post.created_at else '' }}</span>
+            {% if post.zone %}
+            <a href="/zones/{{ post.zone.slug }}" class="flair purple" style="font-size:9px;">z/{{ post.zone.name }}</a>
+            {% elif post.category and post.category != 'general' %}
+            <span class="flair">{{ post.category }}</span>
+            {% endif %}
+          </div>
+          <div class="post-title"><a href="/posts/{{ post.id }}">{{ post.content[:120] }}{% if post.content|length > 120 %}…{% endif %}</a></div>
+          {% if post.content|length > 120 %}<div class="post-content">{{ post.content[120:300] }}{% if post.content|length > 300 %}…{% endif %}</div>{% endif %}
+
+          {% if post.image_url %}
+          <div class="media-wrap">
+            {% if post.media_type == 'video' %}
+              <video class="media-video" controls preload="metadata" style="max-height:360px;"><source src="{{ post.image_url }}"></video>
+            {% else %}
+              <img class="media-img" src="{{ post.image_url }}" alt="" onclick="openLightbox(this.src)" onerror="this.parentElement.style.display='none'" style="max-height:360px;"/>
+            {% endif %}
+          </div>
+          {% endif %}
+
+          <!-- Reactions -->
+          {% if post.reactions %}
+          <div class="reactions-bar">
+            {% set reaction_map = {} %}
+            {% for r in post.reactions %}
+              {% set _ = reaction_map.__setitem__(r.type, reaction_map.get(r.type, 0) + 1) %}
+            {% endfor %}
+            {% set emoji_map = {'fire':'🔥','love':'❤️','laugh':'😂','mind_blown':'🤯','clap':'👏','dead':'💀'} %}
+            {% for rtype, count in reaction_map.items() %}
+            <span class="reaction-btn" onclick="reactPost({{ post.id }},'{{ rtype }}')">
+              {{ emoji_map.get(rtype, '🔥') }}
+              <span class="r-count">{{ count }}</span>
+            </span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="post-actions">
+            <a href="/posts/{{ post.id }}#comments" class="act-btn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              {{ post.comments|length }}
+            </a>
+            <div class="reaction-picker" style="display:inline-flex;" id="rp-{{ post.id }}">
+              <button class="react-opt" onclick="reactPost({{ post.id }},'fire')">🔥</button>
+              <button class="react-opt" onclick="reactPost({{ post.id }},'love')">❤️</button>
+              <button class="react-opt" onclick="reactPost({{ post.id }},'laugh')">😂</button>
+              <button class="react-opt" onclick="reactPost({{ post.id }},'mind_blown')">🤯</button>
+              <button class="react-opt" onclick="reactPost({{ post.id }},'clap')">👏</button>
+              <button class="react-opt" onclick="reactPost({{ post.id }},'dead')">💀</button>
+            </div>
+            <button class="act-btn" onclick="bookmarkPost({{ post.id }},this)" style="margin-left:auto;">🔖</button>
+            {% if user and post.author.id == user.id %}
+            <form action="/posts/{{ post.id }}/delete" method="post" style="display:inline;">
+              <button type="submit" class="act-btn" onclick="return confirm('Delete?')">🗑️</button>
+            </form>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="card card-p empty">
+        <div class="empty-icon">⚡</div>
+        <div class="empty-title">The street is quiet</div>
+        <div class="empty-sub">Follow people or <a href="/posts/create" style="color:var(--red2);">drop the first post</a>.</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sw">
+      <div class="sw-head">My Street</div>
+      <div class="sw-body">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          {% if user.avatar_url %}
+            <img src="{{ user.avatar_url }}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--red-dim);" alt=""/>
+          {% else %}
+            <div class="av" style="width:42px;height:42px;font-size:17px;">{{ user.display_name[0] }}</div>
+          {% endif %}
+          <div>
+            <div style="font-family:var(--font-h);font-size:14px;font-weight:600;">{{ user.display_name }}</div>
+            <div style="font-size:12px;color:var(--text3);font-family:var(--font-m);">u/{{ user.username }}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:6px;margin-bottom:12px;">
+          <a href="/posts/create" class="btn-primary" style="flex:1;justify-content:center;display:flex;">+ Post</a>
+          <a href="/users/bookmarks" class="btn-ghost" style="font-size:12px;">🔖</a>
+        </div>
+        <a href="/users/{{ user.username }}" style="display:block;text-align:center;font-size:12px;color:var(--text3);">View profile →</a>
+      </div>
+    </div>
+
+    {% if trending_zones %}
+    <div class="sw">
+      <div class="sw-head">🏘️ Trending Zones</div>
+      <div class="sw-body">
+        {% for zone in trending_zones %}
+        <div class="follow-row">
+          <a href="/zones/{{ zone.slug }}" style="display:flex;align-items:center;gap:8px;flex:1;">
+            <div style="width:28px;height:28px;border-radius:6px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
+              {% if zone.icon_url %}<img src="{{ zone.icon_url }}" style="width:28px;height:28px;border-radius:6px;object-fit:cover;"/>{% else %}🏘️{% endif %}
+            </div>
+            <div style="min-width:0;">
+              <div style="font-size:12px;font-weight:500;">{{ zone.name }}</div>
+              <div style="font-size:10px;color:var(--text3);">{{ zone.member_count }} members</div>
+            </div>
+          </a>
+        </div>
+        {% endfor %}
+        <a href="/zones" style="display:block;text-align:center;font-size:12px;color:var(--text3);margin-top:8px;">Browse all zones →</a>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if suggested %}
+    <div class="sw">
+      <div class="sw-head">Who to follow</div>
+      <div class="sw-body">
+        {% for u in suggested %}
+        <div class="follow-row">
+          <a href="/users/{{ u.username }}" style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+            {% if u.avatar_url %}
+              <img src="{{ u.avatar_url }}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt=""/>
+            {% else %}
+              <div class="av" style="width:32px;height:32px;font-size:12px;flex-shrink:0;">{{ u.display_name[0] }}</div>
+            {% endif %}
+            <div style="min-width:0;">
+              <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ u.display_name }}</div>
+              <div style="font-size:11px;color:var(--text3);font-family:var(--font-m);">{{ u.followers|length }} followers</div>
+            </div>
+          </a>
+          <button class="btn-follow" onclick="followUser('{{ u.username }}',this)">Follow</button>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="sw">
+      <div class="sw-head">About</div>
+      <div class="sw-body">
+        <p style="font-size:13px;color:var(--text2);line-height:1.6;">Strange Street is a social platform where you connect with strangers through shared interests, discover communities in Zones, and progressively reveal your identity.</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function likePost(id,btn){const r=await fetch(`/posts/${id}/like`,{method:'POST'});const d=await r.json();document.getElementById('lc-'+id).textContent=d.count;btn.classList.toggle('up',d.liked);}
+async function followUser(u,btn){const r=await fetch(`/users/${u}/follow`,{method:'POST'});const d=await r.json();btn.textContent=d.following?'Following':'Follow';btn.classList.toggle('on',d.following);}
+function filterCat(btn,cat){document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.querySelectorAll('.post').forEach(p=>{p.style.display=(cat==='all'||p.dataset.cat===cat)?'flex':'none';});}
+async function reactPost(id,type){const r=await fetch(`/posts/${id}/react/${type}`,{method:'POST'});const d=await r.json();location.reload();}
+async function bookmarkPost(id,btn){const r=await fetch(`/posts/${id}/bookmark`,{method:'POST'});const d=await r.json();btn.style.opacity=d.bookmarked?'1':'0.4';}
+</script>
+{% endblock %}

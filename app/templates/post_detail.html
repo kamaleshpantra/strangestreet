@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% block title %}{{ post.content[:50] }} — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:700px;margin:0 auto;">
+  <div class="post" style="margin-bottom:16px;">
+    <div class="post-vote">
+      <button class="v-btn {% if liked %}up{% endif %}" onclick="likePost({{ post.id }},this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+      </button>
+      <span class="v-count" id="lc">{{ like_count }}</span>
+    </div>
+    <div class="post-body" style="padding:16px;">
+      <div class="post-meta" style="margin-bottom:10px;">
+        <a href="/users/{{ post.author.username }}" class="post-author">
+          {% if post.author.avatar_url %}
+            <img src="{{ post.author.avatar_url }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt=""/>
+          {% else %}
+            <div class="av" style="width:24px;height:24px;font-size:9px;">{{ post.author.display_name[0] }}</div>
+          {% endif %}
+          <strong>{{ post.author.display_name }}</strong>
+          {% if post.author.is_verified %}<span class="verified">✓</span>{% endif %}
+          <span style="color:var(--text3);">·</span>
+          <span style="color:var(--text3);font-size:11px;">u/{{ post.author.username }}</span>
+        </a>
+        <span class="post-time">{{ post.created_at.strftime('%B %d, %Y at %I:%M %p') if post.created_at else '' }}</span>
+        {% if post.zone %}
+        <a href="/zones/{{ post.zone.slug }}" class="flair purple" style="font-size:9px;">z/{{ post.zone.name }}</a>
+        {% elif post.category and post.category != 'general' %}
+        <span class="flair">{{ post.category }}</span>
+        {% endif %}
+      </div>
+      <div style="font-size:15px;line-height:1.7;color:var(--text);margin-bottom:12px;">{{ post.content }}</div>
+
+      {% if post.image_url %}
+      <div class="media-wrap">
+        {% if post.media_type == 'video' %}
+          <video class="media-video" controls preload="metadata"><source src="{{ post.image_url }}"></video>
+        {% else %}
+          <img class="media-img" src="{{ post.image_url }}" alt="" onclick="openLightbox(this.src)" onerror="this.parentElement.style.display='none'"/>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <!-- Poll -->
+      {% if post.poll %}
+      <div class="poll-container">
+        <div class="poll-question">{{ post.poll.question }}</div>
+        {% set total_votes = namespace(val=0) %}
+        {% for opt in post.poll.options %}{% set total_votes.val = total_votes.val + opt.votes|length %}{% endfor %}
+        {% for opt in post.poll.options %}
+          {% set pct = ((opt.votes|length / total_votes.val * 100) if total_votes.val > 0 else 0)|round|int %}
+          <div class="poll-option {% if user_poll_vote == opt.id %}voted{% endif %}"
+               {% if not user_poll_vote %}onclick="votePoll({{ post.id }},{{ opt.id }})"{% endif %}>
+            <div class="poll-fill" style="width:{{ pct if user_poll_vote else 0 }}%;"></div>
+            <span class="poll-text">{{ opt.text }}</span>
+            {% if user_poll_vote %}<span class="poll-pct">{{ pct }}% ({{ opt.votes|length }})</span>{% endif %}
+          </div>
+        {% endfor %}
+        <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:var(--font-m);">{{ total_votes.val }} votes</div>
+      </div>
+      {% endif %}
+
+      <!-- Reactions -->
+      <div class="reactions-bar" id="reactions-bar">
+        {% set emoji_map = {'fire':'🔥','love':'❤️','laugh':'😂','mind_blown':'🤯','clap':'👏','dead':'💀'} %}
+        {% for rtype, count in reaction_counts.items() %}
+        <span class="reaction-btn {% if user_reaction and user_reaction.type == rtype %}active{% endif %}"
+              onclick="reactPost({{ post.id }},'{{ rtype }}')">
+          {{ emoji_map.get(rtype, '🔥') }}
+          <span class="r-count">{{ count }}</span>
+        </span>
+        {% endfor %}
+      </div>
+
+      <!-- Actions -->
+      <div class="post-actions" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+        <div class="reaction-picker" style="display:inline-flex;">
+          <button class="react-opt" onclick="reactPost({{ post.id }},'fire')">🔥</button>
+          <button class="react-opt" onclick="reactPost({{ post.id }},'love')">❤️</button>
+          <button class="react-opt" onclick="reactPost({{ post.id }},'laugh')">😂</button>
+          <button class="react-opt" onclick="reactPost({{ post.id }},'mind_blown')">🤯</button>
+          <button class="react-opt" onclick="reactPost({{ post.id }},'clap')">👏</button>
+          <button class="react-opt" onclick="reactPost({{ post.id }},'dead')">💀</button>
+        </div>
+        <button class="act-btn" onclick="bookmarkPost({{ post.id }},this)" style="{% if bookmarked %}opacity:1{% else %}opacity:0.4{% endif %};margin-left:auto;">🔖</button>
+        <button class="act-btn" onclick="navigator.clipboard.writeText(window.location.href);this.textContent='✓ Copied'">📤 Share</button>
+        {% if user and post.author.id == user.id %}
+        <form action="/posts/{{ post.id }}/delete" method="post" style="display:inline;">
+          <button type="submit" class="act-btn" onclick="return confirm('Delete?')">🗑️ Delete</button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Comments -->
+  <div id="comments" class="card card-p" style="margin-bottom:16px;">
+    <div class="sec-head">Comments ({{ post.comments|length }})</div>
+    <form action="/posts/{{ post.id }}/comment" method="post" style="display:flex;gap:10px;margin-bottom:16px;">
+      <input name="content" type="text" class="inp" placeholder="Add a comment..." required style="flex:1;"/>
+      <button type="submit" class="btn-primary">Comment</button>
+    </form>
+    {% for c in post.comments %}
+    <div class="comment">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <a href="/users/{{ c.author.username }}" style="display:flex;align-items:center;gap:6px;">
+          {% if c.author.avatar_url %}
+            <img src="{{ c.author.avatar_url }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt=""/>
+          {% else %}
+            <div class="av" style="width:24px;height:24px;font-size:9px;">{{ c.author.display_name[0] }}</div>
+          {% endif %}
+          <strong style="font-size:13px;font-weight:500;">{{ c.author.display_name }}</strong>
+        </a>
+        <span class="post-time">{{ c.created_at.strftime('%b %d, %I:%M %p') if c.created_at else '' }}</span>
+      </div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.6;padding-left:30px;">{{ c.content }}</div>
+    </div>
+    {% endfor %}
+    {% if not post.comments %}
+    <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">No comments yet. Be the first!</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function likePost(id,btn){const r=await fetch(`/posts/${id}/like`,{method:'POST'});const d=await r.json();document.getElementById('lc').textContent=d.count;btn.classList.toggle('up',d.liked);}
+async function reactPost(id,type){const r=await fetch(`/posts/${id}/react/${type}`,{method:'POST'});location.reload();}
+async function bookmarkPost(id,btn){const r=await fetch(`/posts/${id}/bookmark`,{method:'POST'});const d=await r.json();btn.style.opacity=d.bookmarked?'1':'0.4';}
+async function votePoll(postId,optId){const r=await fetch(`/posts/${postId}/poll/${optId}/vote`,{method:'POST'});location.reload();}
+</script>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sign in — Strange Street{% endblock %}
+{% block content %}
+<div style="min-height:calc(100vh - 120px);display:flex;align-items:center;justify-content:center;padding:40px 0;">
+  <div style="width:100%;max-width:380px;">
+
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:linear-gradient(135deg,var(--red),#9f1239);border-radius:12px;font-family:var(--font-h);font-size:24px;font-weight:800;color:#fff;margin-bottom:16px;box-shadow:0 4px 20px rgba(220,38,38,0.3);">S</div>
+      <h1 style="font-family:var(--font-h);font-size:24px;font-weight:800;letter-spacing:-0.5px;">Welcome back</h1>
+      <p style="font-size:13px;color:var(--text3);margin-top:4px;">Sign in to Strange Street</p>
+    </div>
+
+    <div class="card card-p" style="padding:28px;">
+      {% if error %}
+      <div class="alert-err" style="margin-bottom:18px;">{{ error }}</div>
+      {% endif %}
+
+      <form action="/auth/login" method="post">
+        <div style="margin-bottom:14px;">
+          <label class="lbl">Username</label>
+          <input name="username" type="text" class="inp" placeholder="your username" required autofocus/>
+        </div>
+        <div style="margin-bottom:20px;">
+          <label class="lbl">Password</label>
+          <input name="password" type="password" class="inp" placeholder="your password" required/>
+        </div>
+        <button type="submit" class="btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:10px;">Sign in</button>
+      </form>
+
+      <div style="text-align:center;margin-top:18px;font-size:13px;color:var(--text3);">
+        New here? <a href="/auth/register" style="color:var(--red2);font-weight:500;">Join the Street</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

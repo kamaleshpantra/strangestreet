@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Join — Strange Street{% endblock %}
+{% block content %}
+<div style="min-height:calc(100vh - 120px);display:flex;align-items:center;justify-content:center;padding:40px 0;">
+  <div style="width:100%;max-width:580px;">
+
+    <div style="text-align:center;margin-bottom:28px;">
+      <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:linear-gradient(135deg,var(--red),#9f1239);border-radius:12px;font-family:var(--font-h);font-size:24px;font-weight:800;color:#fff;margin-bottom:16px;box-shadow:0 4px 20px rgba(220,38,38,0.3);">S</div>
+      <h1 style="font-family:var(--font-h);font-size:24px;font-weight:800;letter-spacing:-0.5px;">Join the Street</h1>
+      <p style="font-size:13px;color:var(--text3);margin-top:4px;">Create your Strange Street account</p>
+    </div>
+
+    <!-- Step Wizard -->
+    <div class="wizard-steps">
+      <div class="wizard-step active" id="ws1">1 · Account</div>
+      <div class="wizard-step" id="ws2">2 · Interests</div>
+      <div class="wizard-step" id="ws3">3 · Alias</div>
+    </div>
+
+    <div class="card card-p" style="padding:28px;">
+      {% if error %}
+      <div class="alert-err" style="margin-bottom:18px;">{{ error }}</div>
+      {% endif %}
+
+      <form action="/auth/register" method="post" id="reg-form">
+        <input type="hidden" name="interest_ids" id="interest-ids" value=""/>
+
+        <!-- STEP 1: Account -->
+        <div class="step-panel active" id="step1">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div>
+              <label class="lbl">Display name</label>
+              <input name="display_name" type="text" class="inp" placeholder="Your Name" id="reg-display"/>
+            </div>
+            <div>
+              <label class="lbl">Username</label>
+              <input name="username" type="text" class="inp" placeholder="handle" required pattern="[a-zA-Z0-9_]+" id="reg-user"/>
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label class="lbl">Email</label>
+            <input name="email" type="email" class="inp" placeholder="you@email.com" required id="reg-email"/>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label class="lbl">Password</label>
+            <input name="password" type="password" class="inp" placeholder="min 6 characters" required minlength="6" id="reg-pass"/>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label class="lbl">Relationship status</label>
+            <select name="relationship_status" class="inp">
+              <option value="">Prefer not to say</option>
+              <option value="single">Single</option>
+              <option value="in_relationship">In a relationship</option>
+              <option value="married">Married</option>
+              <option value="engaged">Engaged</option>
+              <option value="its_complicated">It's complicated</option>
+              <option value="open_relationship">Open relationship</option>
+              <option value="divorced">Divorced</option>
+              <option value="widowed">Widowed</option>
+            </select>
+          </div>
+
+          <button type="button" onclick="goStep(2)" class="btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:10px;margin-top:6px;">
+            Next → Choose Interests
+          </button>
+        </div>
+
+        <!-- STEP 2: Interests -->
+        <div class="step-panel" id="step2">
+          <div style="margin-bottom:14px;">
+            <input type="text" class="inp" placeholder="🔍 Search interests..." oninput="filterInterests(this.value)" id="interest-search"/>
+          </div>
+
+          <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">
+            Selected: <span id="selected-count">0</span> interests
+          </div>
+
+          <div class="interest-picker" id="interest-picker">
+            {% for cat_name, items in categories.items() %}
+            <div class="cat-group" data-cat="{{ cat_name }}">
+              <div class="cat-label">{{ cat_name }}</div>
+              <div class="pills-wrap">
+                {% for interest in items %}
+                <span class="pill" data-id="{{ interest.id }}" data-name="{{ interest.name|lower }}" onclick="toggleInterest(this)">
+                  <span class="pill-icon">{{ interest.icon }}</span>
+                  {{ interest.name }}
+                </span>
+                {% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+
+          <div style="display:flex;gap:10px;margin-top:16px;">
+            <button type="button" onclick="goStep(1)" class="btn-ghost" style="flex:1;justify-content:center;">← Back</button>
+            <button type="button" onclick="goStep(3)" class="btn-primary" style="flex:2;justify-content:center;font-size:14px;padding:10px;">
+              Next → Create Alias
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 3: Alias Profile -->
+        <div class="step-panel" id="step3">
+          <div style="padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:18px;">
+            <div style="font-size:12px;color:var(--text2);line-height:1.6;">
+              🎭 <strong>Your alias profile</strong> is what strangers see when discovering you by interests.
+              It's completely separate from your public profile. No real identity is shown.
+            </div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label class="lbl">Alias Name</label>
+            <input name="alias_name" type="text" class="inp" placeholder="Mystery Stranger, Night Owl, etc." id="reg-alias"/>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;">This is what strangers will see. Make it fun!</div>
+          </div>
+
+          <div style="margin-bottom:14px;">
+            <label class="lbl">Alias Bio</label>
+            <textarea name="alias_bio" class="inp" rows="3" placeholder="A short bio for your anonymous profile..."></textarea>
+          </div>
+
+          <div style="margin-bottom:18px;">
+            <label class="lbl">Alias Relationship Status</label>
+            <select name="alias_relationship_status" class="inp">
+              <option value="">Prefer not to say</option>
+              <option value="single">Single</option>
+              <option value="in_relationship">In a relationship</option>
+              <option value="married">Married</option>
+              <option value="its_complicated">It's complicated</option>
+            </select>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;">This can differ from your public status</div>
+          </div>
+
+          <div style="display:flex;gap:10px;">
+            <button type="button" onclick="goStep(2)" class="btn-ghost" style="flex:1;justify-content:center;">← Back</button>
+            <button type="submit" class="btn-primary" style="flex:2;justify-content:center;font-size:14px;padding:10px;">
+              🚀 Create Account
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div style="text-align:center;margin-top:18px;font-size:13px;color:var(--text3);">
+        Already on the Street? <a href="/auth/login" style="color:var(--red2);font-weight:500;">Sign in</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const selectedInterests = new Set();
+
+function goStep(n) {
+  // Validate step 1
+  if (n === 2) {
+    const user = document.getElementById('reg-user');
+    const email = document.getElementById('reg-email');
+    const pass = document.getElementById('reg-pass');
+    if (!user.value || !email.value || !pass.value || pass.value.length < 6) {
+      if (!user.value) user.focus();
+      else if (!email.value) email.focus();
+      else pass.focus();
+      return;
+    }
+  }
+
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.wizard-step').forEach(s => {
+    s.classList.remove('active','done');
+  });
+  document.getElementById('step'+n).classList.add('active');
+  for (let i = 1; i <= 3; i++) {
+    const ws = document.getElementById('ws'+i);
+    if (i < n) ws.classList.add('done');
+    else if (i === n) ws.classList.add('active');
+  }
+}
+
+function toggleInterest(el) {
+  const id = el.dataset.id;
+  if (selectedInterests.has(id)) {
+    selectedInterests.delete(id);
+    el.classList.remove('selected');
+  } else {
+    selectedInterests.add(id);
+    el.classList.add('selected');
+  }
+  document.getElementById('selected-count').textContent = selectedInterests.size;
+  document.getElementById('interest-ids').value = Array.from(selectedInterests).join(',');
+}
+
+function filterInterests(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('#interest-picker .pill').forEach(p => {
+    p.style.display = p.dataset.name.includes(q) ? '' : 'none';
+  });
+  document.querySelectorAll('#interest-picker .cat-group').forEach(g => {
+    const visible = g.querySelectorAll('.pill[style=""], .pill:not([style])');
+    g.style.display = visible.length ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,34 @@
+<!-- Story Bar Fragment (included in feed) -->
+{% if story_users %}
+<div class="story-bar">
+  {% if not has_my_story %}
+  <div class="story-item" onclick="document.getElementById('story-upload').click()">
+    <div class="story-ring" style="background:var(--border2);padding:2px;">
+      {% if user.avatar_url %}
+        <img src="{{ user.avatar_url }}" alt=""/>
+      {% else %}
+        <div class="av" style="width:52px;height:52px;font-size:18px;border:2px solid var(--bg);">{{ user.display_name[0] }}</div>
+      {% endif %}
+    </div>
+    <div class="story-name" style="color:var(--red2);">+ Story</div>
+  </div>
+  {% endif %}
+  {% for su in story_users %}
+  <a href="/stories/{{ su.user.id }}" class="story-item">
+    <div class="story-ring {% if su.all_viewed %}viewed{% endif %}">
+      {% if su.user.avatar_url %}
+        <img src="{{ su.user.avatar_url }}" alt=""/>
+      {% else %}
+        <div class="av" style="width:52px;height:52px;font-size:18px;border:2px solid var(--bg);">{{ su.user.display_name[0] }}</div>
+      {% endif %}
+    </div>
+    <div class="story-name">{{ su.user.display_name }}</div>
+  </a>
+  {% endfor %}
+</div>
+<!-- Hidden story upload form -->
+<form action="/stories/create" method="post" enctype="multipart/form-data" id="story-form" style="display:none;">
+  <input type="file" name="media" id="story-upload" accept="image/*,video/*" onchange="document.getElementById('story-form').submit();"/>
+  <input type="hidden" name="caption" value=""/>
+</form>
+{% endif %}

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Stories — {{ target.display_name }}{% endblock %}
+{% block content %}
+<style>
+  .page{padding:0 !important;max-width:100% !important;}
+</style>
+<div class="story-viewer" id="story-viewer">
+  <div class="story-container">
+    <!-- Progress -->
+    <div class="story-progress" id="story-progress">
+      {% for s in stories %}
+      <div class="story-progress-bar">
+        <div class="story-progress-fill" id="prog-{{ loop.index0 }}" style="width:0%;"></div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- User Info -->
+    <div style="position:absolute;top:20px;left:12px;right:12px;z-index:2;display:flex;align-items:center;gap:10px;">
+      {% if target.avatar_url %}
+        <img src="{{ target.avatar_url }}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3);" alt=""/>
+      {% else %}
+        <div class="av" style="width:32px;height:32px;font-size:12px;border:2px solid rgba(255,255,255,0.3);">{{ target.display_name[0] }}</div>
+      {% endif %}
+      <div style="flex:1;">
+        <div style="font-size:13px;font-weight:600;color:#fff;">{{ target.display_name }}</div>
+      </div>
+      <a href="/" style="color:rgba(255,255,255,0.7);font-size:24px;padding:4px;">✕</a>
+    </div>
+
+    <!-- Story Content -->
+    <div class="story-media" id="story-media" onclick="nextStory()">
+      <!-- Filled by JS -->
+    </div>
+
+    <!-- Caption -->
+    <div class="story-caption" id="story-caption" style="display:none;"></div>
+
+    <!-- Nav buttons -->
+    <div style="position:absolute;top:50%;left:0;right:0;display:flex;justify-content:space-between;padding:0 8px;transform:translateY(-50%);pointer-events:none;">
+      <button onclick="prevStory()" style="pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.4);border:none;color:#fff;font-size:16px;cursor:pointer;">‹</button>
+      <button onclick="nextStory()" style="pointer-events:all;width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,0.4);border:none;color:#fff;font-size:16px;cursor:pointer;">›</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const stories = [
+{% for s in stories %}
+  {
+    id: {{ s.story.id }},
+    media_url: "{{ s.story.media_url }}",
+    media_type: "{{ s.story.media_type }}",
+    caption: {{ s.story.caption|tojson if s.story.caption else 'null' }},
+    viewed: {{ 'true' if s.viewed else 'false' }},
+  },
+{% endfor %}
+];
+
+let current = 0;
+let timer = null;
+const DURATION = 5000;
+
+function showStory(idx) {
+  if (idx < 0 || idx >= stories.length) {
+    window.location.href = '/';
+    return;
+  }
+  current = idx;
+  const s = stories[idx];
+  const media = document.getElementById('story-media');
+  const caption = document.getElementById('story-caption');
+
+  // Reset progress
+  clearInterval(timer);
+  document.querySelectorAll('.story-progress-fill').forEach((el, i) => {
+    el.style.transition = 'none';
+    el.style.width = i < idx ? '100%' : '0%';
+  });
+
+  // Show media
+  if (s.media_type === 'video') {
+    media.innerHTML = `<video src="${s.media_url}" autoplay playsinline style="width:100%;max-height:80vh;"></video>`;
+    const vid = media.querySelector('video');
+    vid.onended = () => nextStory();
+  } else {
+    media.innerHTML = `<img src="${s.media_url}" alt="" style="width:100%;max-height:80vh;object-fit:contain;"/>`;
+    // Auto-advance
+    const fill = document.getElementById('prog-'+idx);
+    setTimeout(() => {
+      fill.style.transition = `width ${DURATION}ms linear`;
+      fill.style.width = '100%';
+    }, 50);
+    timer = setTimeout(() => nextStory(), DURATION);
+  }
+
+  // Caption
+  if (s.caption) {
+    caption.textContent = s.caption;
+    caption.style.display = 'block';
+  } else {
+    caption.style.display = 'none';
+  }
+
+  // Mark viewed
+  if (!s.viewed) {
+    fetch(`/stories/${s.id}/view`, {method:'POST'});
+    s.viewed = true;
+  }
+}
+
+function nextStory() { showStory(current + 1); }
+function prevStory() { showStory(current - 1); }
+
+// Find first unviewed
+let startIdx = stories.findIndex(s => !s.viewed);
+if (startIdx === -1) startIdx = 0;
+showStory(startIdx);
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') nextStory();
+  else if (e.key === 'ArrowLeft') prevStory();
+  else if (e.key === 'Escape') window.location.href = '/';
+});
+</script>
+{% endblock %}

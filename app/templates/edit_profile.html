@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}Edit Profile — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:600px;margin:0 auto;">
+  <h1 style="font-family:var(--font-h);font-size:22px;font-weight:700;margin-bottom:20px;letter-spacing:-0.3px;">Edit profile</h1>
+
+  <div class="card card-p" style="padding:24px;">
+    <form action="/users/{{ user.username }}/edit" method="post" enctype="multipart/form-data">
+      <input type="hidden" name="interest_ids" id="interest-ids" value="{{ user_interest_ids|join(',') if user_interest_ids else '' }}"/>
+
+      <!-- Avatar section -->
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--border);">
+        <div style="position:relative;cursor:pointer;" onclick="document.getElementById('av-input').click()">
+          {% if user.avatar_url %}
+            <img id="av-preview" src="{{ user.avatar_url }}" alt=""
+                 style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid var(--red-dim);"/>
+          {% else %}
+            <div class="av" id="av-initials" style="width:70px;height:70px;font-size:26px;">{{ user.display_name[0] }}</div>
+            <img id="av-preview" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid var(--red-dim);display:none;" src="" alt=""/>
+          {% endif %}
+          <div style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:20px;"
+               onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0">📷</div>
+        </div>
+        <div>
+          <div style="font-family:var(--font-h);font-size:15px;font-weight:600;">{{ user.display_name }}</div>
+          <div style="font-family:var(--font-m);font-size:11px;color:var(--text3);">u/{{ user.username }}</div>
+          <button type="button" onclick="document.getElementById('av-input').click()" style="margin-top:6px;font-size:12px;color:var(--red2);background:transparent;border:none;cursor:pointer;">Change photo</button>
+        </div>
+        <input type="file" id="av-input" name="avatar_file" accept="image/*" style="display:none;" onchange="previewAvatar(this)"/>
+      </div>
+
+      <!-- PUBLIC PROFILE -->
+      <div class="sec-head" style="margin-bottom:14px;">Public Profile</div>
+
+      <div style="margin-bottom:14px;">
+        <label class="lbl">Display name</label>
+        <input name="display_name" type="text" class="inp" value="{{ user.display_name or '' }}"/>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="lbl">Bio</label>
+        <textarea name="bio" class="inp" rows="3" placeholder="Tell people what's strange about you...">{{ user.bio or '' }}</textarea>
+      </div>
+      <div style="margin-bottom:22px;">
+        <label class="lbl">Relationship status</label>
+        <select name="relationship_status" class="inp">
+          <option value="" {% if not user.relationship_status %}selected{% endif %}>Prefer not to say</option>
+          <option value="single"            {% if user.relationship_status == 'single' %}selected{% endif %}>Single</option>
+          <option value="in_relationship"   {% if user.relationship_status == 'in_relationship' %}selected{% endif %}>In a relationship</option>
+          <option value="married"           {% if user.relationship_status == 'married' %}selected{% endif %}>Married</option>
+          <option value="engaged"           {% if user.relationship_status == 'engaged' %}selected{% endif %}>Engaged</option>
+          <option value="its_complicated"   {% if user.relationship_status == 'its_complicated' %}selected{% endif %}>It's complicated</option>
+          <option value="open_relationship" {% if user.relationship_status == 'open_relationship' %}selected{% endif %}>Open relationship</option>
+          <option value="divorced"          {% if user.relationship_status == 'divorced' %}selected{% endif %}>Divorced</option>
+          <option value="widowed"           {% if user.relationship_status == 'widowed' %}selected{% endif %}>Widowed</option>
+        </select>
+      </div>
+
+      <!-- ALIAS PROFILE -->
+      <div class="sec-head" style="margin-bottom:14px;">🎭 Alias Profile</div>
+      <div style="padding:10px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;margin-bottom:14px;font-size:12px;color:var(--text3);">
+        Your alias profile is what strangers see when they discover you through interests. It's separate from your public identity.
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label class="lbl">Alias Name</label>
+        <input name="alias_name" type="text" class="inp" value="{{ user.alias_name or '' }}" placeholder="Your anonymous name"/>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label class="lbl">Alias Bio</label>
+        <textarea name="alias_bio" class="inp" rows="2" placeholder="Your anonymous bio...">{{ user.alias_bio or '' }}</textarea>
+      </div>
+      <div style="margin-bottom:22px;">
+        <label class="lbl">Alias Relationship Status</label>
+        <select name="alias_relationship_status" class="inp">
+          <option value="" {% if not user.alias_relationship_status %}selected{% endif %}>Prefer not to say</option>
+          <option value="single" {% if user.alias_relationship_status == 'single' %}selected{% endif %}>Single</option>
+          <option value="in_relationship" {% if user.alias_relationship_status == 'in_relationship' %}selected{% endif %}>In a relationship</option>
+          <option value="married" {% if user.alias_relationship_status == 'married' %}selected{% endif %}>Married</option>
+          <option value="its_complicated" {% if user.alias_relationship_status == 'its_complicated' %}selected{% endif %}>It's complicated</option>
+        </select>
+      </div>
+
+      <!-- INTERESTS -->
+      <div class="sec-head" style="margin-bottom:14px;">🎯 Interests</div>
+      <div style="margin-bottom:10px;">
+        <input type="text" class="inp" placeholder="🔍 Search interests..." oninput="filterInterests(this.value)"/>
+      </div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:8px;">Selected: <span id="selected-count">{{ user_interest_ids|length }}</span></div>
+      <div class="interest-picker" style="margin-bottom:22px;">
+        {% for cat_name, items in categories.items() %}
+        <div class="cat-group" data-cat="{{ cat_name }}">
+          <div class="cat-label">{{ cat_name }}</div>
+          <div class="pills-wrap">
+            {% for interest in items %}
+            <span class="pill {% if interest.id in user_interest_ids %}selected{% endif %}"
+                  data-id="{{ interest.id }}" data-name="{{ interest.name|lower }}" onclick="toggleInterest(this)">
+              <span class="pill-icon">{{ interest.icon }}</span>
+              {{ interest.name }}
+            </span>
+            {% endfor %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button type="submit" class="btn-primary" style="font-size:14px;padding:10px 24px;">Save changes</button>
+        <a href="/users/{{ user.username }}" class="btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const selectedInterests = new Set(
+  document.getElementById('interest-ids').value.split(',').filter(x => x)
+);
+
+function previewAvatar(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const url = URL.createObjectURL(file);
+  const preview = document.getElementById('av-preview');
+  const initials = document.getElementById('av-initials');
+  preview.src = url;
+  preview.style.display = 'block';
+  if (initials) initials.style.display = 'none';
+}
+
+function toggleInterest(el) {
+  const id = el.dataset.id;
+  if (selectedInterests.has(id)) {
+    selectedInterests.delete(id);
+    el.classList.remove('selected');
+  } else {
+    selectedInterests.add(id);
+    el.classList.add('selected');
+  }
+  document.getElementById('selected-count').textContent = selectedInterests.size;
+  document.getElementById('interest-ids').value = Array.from(selectedInterests).join(',');
+}
+
+function filterInterests(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll('.interest-picker .pill').forEach(p => {
+    p.style.display = p.dataset.name.includes(q) ? '' : 'none';
+  });
+  document.querySelectorAll('.interest-picker .cat-group').forEach(g => {
+    const visible = g.querySelectorAll('.pill[style=""], .pill:not([style])');
+    g.style.display = visible.length ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

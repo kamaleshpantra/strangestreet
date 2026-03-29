@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}{{ target.alias_name }} — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:600px;margin:0 auto;">
+
+  <!-- Alias Profile Card -->
+  <div class="card" style="overflow:hidden;margin-bottom:16px;">
+    <div style="height:100px;background:linear-gradient(135deg,#1a0404 0%,#0d0d2d 50%,var(--bg2) 100%);position:relative;overflow:hidden;">
+      <div style="position:absolute;inset:0;background:repeating-linear-gradient(45deg,transparent,transparent 30px,rgba(220,38,38,0.03) 30px,rgba(220,38,38,0.03) 31px);"></div>
+      <div style="position:absolute;bottom:12px;right:16px;font-family:var(--font-m);font-size:10px;color:var(--text3);background:rgba(0,0,0,0.5);padding:3px 8px;border-radius:4px;">🎭 Alias Profile</div>
+    </div>
+
+    <div style="padding:0 24px 24px;position:relative;">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:-30px;margin-bottom:16px;">
+        <div class="av" style="width:72px;height:72px;font-size:28px;border:3px solid var(--bg2);background:linear-gradient(135deg,var(--red-dim),#1a0416);">
+          {{ target.alias_name[0] if target.alias_name else '?' }}
+        </div>
+        <div style="display:flex;gap:8px;padding-bottom:4px;">
+          {% if connection %}
+            {% if connection.status == 'pending' and connection.requester_id == user.id %}
+              <button class="btn-ghost" disabled style="opacity:0.6;">⏳ Pending</button>
+            {% elif connection.status == 'pending' and connection.requested_id == user.id %}
+              <button onclick="acceptConn({{ connection.id }})" class="btn-success">✓ Accept</button>
+              <button onclick="rejectConn({{ connection.id }})" class="btn-danger">✕ Reject</button>
+            {% elif connection.status == 'accepted' %}
+              <a href="/messages/c/{{ connection.id }}" class="btn-primary">💬 Message</a>
+            {% endif %}
+          {% else %}
+            <button onclick="sendRequest({{ target.id }})" class="btn-primary" id="connect-btn">🤝 Connect</button>
+          {% endif %}
+        </div>
+      </div>
+
+      <h1 style="font-family:var(--font-h);font-size:22px;font-weight:700;letter-spacing:-0.3px;">{{ target.alias_name }}</h1>
+
+      <!-- Relationship Status -->
+      {% if target.alias_relationship_status %}
+      <div style="margin-top:8px;">
+        {% set rs = target.alias_relationship_status %}
+        {% if rs == 'single' %}<span class="rel" style="background:rgba(34,197,94,0.08);color:#4ade80;border:1px solid rgba(34,197,94,0.2);">Single</span>
+        {% elif rs == 'in_relationship' %}<span class="rel" style="background:rgba(220,38,38,0.08);color:var(--red3);border:1px solid var(--red-dim);">In a relationship</span>
+        {% elif rs == 'married' %}<span class="rel" style="background:rgba(212,168,83,0.08);color:var(--gold);border:1px solid rgba(212,168,83,0.25);">Married</span>
+        {% elif rs == 'its_complicated' %}<span class="rel" style="background:rgba(251,146,60,0.08);color:#fb923c;border:1px solid rgba(251,146,60,0.25);">It's complicated</span>
+        {% else %}<span class="rel" style="background:var(--bg4);color:var(--text3);border:1px solid var(--border);">{{ rs.replace('_',' ').title() }}</span>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if target.alias_bio %}
+      <p style="font-size:14px;color:var(--text2);line-height:1.7;margin-top:12px;max-width:500px;">{{ target.alias_bio }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Shared Interests -->
+  {% if shared_interests %}
+  <div class="sec-head">🔗 Shared Interests ({{ shared_interests|length }})</div>
+  <div class="pills-wrap" style="margin-bottom:20px;">
+    {% for i in shared_interests %}
+    <span class="pill shared">
+      <span class="pill-icon">{{ i.icon }}</span>
+      {{ i.name }}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- Other Interests -->
+  {% if unique_interests %}
+  <div class="sec-head">Their Other Interests ({{ unique_interests|length }})</div>
+  <div class="pills-wrap" style="margin-bottom:20px;">
+    {% for i in unique_interests %}
+    <span class="pill">
+      <span class="pill-icon">{{ i.icon }}</span>
+      {{ i.name }}
+    </span>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <div style="padding:20px;text-align:center;">
+    <a href="/discover" style="font-size:13px;color:var(--text3);">← Back to Discover</a>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function sendRequest(userId) {
+  const btn = document.getElementById('connect-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Sending...';
+  const r = await fetch(`/connections/${userId}/request`, {method:'POST'});
+  const d = await r.json();
+  btn.textContent = d.status === 'pending' ? '⏳ Pending' : d.message;
+  btn.classList.remove('btn-primary');
+  btn.classList.add('btn-ghost');
+}
+async function acceptConn(id) {
+  await fetch(`/connections/${id}/accept`, {method:'POST'});
+  location.reload();
+}
+async function rejectConn(id) {
+  await fetch(`/connections/${id}/reject`, {method:'POST'});
+  location.reload();
+}
+</script>
+{% endblock %}

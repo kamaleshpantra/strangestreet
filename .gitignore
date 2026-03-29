@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Uploads (generated at runtime)
+app/static/uploads/posts/*
+app/static/uploads/avatars/*
+app/static/uploads/zones/*
+app/static/uploads/stories/*
+!app/static/uploads/posts/.gitkeep
+!app/static/uploads/avatars/.gitkeep
+!app/static/uploads/zones/.gitkeep
+!app/static/uploads/stories/.gitkeep
+
+# ML/Simulation (not needed for deploy)
+ml/
+simulation/
+
+# Test files
+test_*.py

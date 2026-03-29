@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Create Zone — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:560px;margin:0 auto;">
+  <h1 style="font-family:var(--font-h);font-size:22px;font-weight:700;margin-bottom:20px;letter-spacing:-0.3px;">Create a Zone</h1>
+
+  <div class="card card-p" style="padding:24px;">
+    {% if error %}
+    <div class="alert-err" style="margin-bottom:18px;">{{ error }}</div>
+    {% endif %}
+
+    <form action="/zones/create" method="post" enctype="multipart/form-data">
+      <div style="margin-bottom:14px;">
+        <label class="lbl">Zone Name</label>
+        <input name="name" type="text" class="inp" placeholder="e.g. Midnight Coders" required maxlength="100"/>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label class="lbl">Description</label>
+        <textarea name="description" class="inp" rows="3" placeholder="What's this zone about?"></textarea>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label class="lbl">Zone Icon</label>
+          <input type="file" name="icon_file" accept="image/*" class="inp" style="padding:8px;"/>
+        </div>
+        <div>
+          <label class="lbl">Banner Image</label>
+          <input type="file" name="banner_file" accept="image/*" class="inp" style="padding:8px;"/>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label class="lbl">Zone Type</label>
+        <select name="zone_type" class="inp">
+          <option value="public">Public — anyone can join and post</option>
+          <option value="restricted">Restricted — anyone can join, posts need approval</option>
+          <option value="private">Private — invite only</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label class="lbl">Rules (optional)</label>
+        <textarea name="rules" class="inp" rows="4" placeholder="1. Be respectful&#10;2. No spam&#10;3. Stay on topic"></textarea>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button type="submit" class="btn-primary" style="font-size:14px;padding:10px 24px;">Create Zone</button>
+        <a href="/zones" class="btn-ghost">Cancel</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

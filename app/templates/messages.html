@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Messages — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+  <h1 style="font-family:var(--font-h);font-size:24px;font-weight:800;letter-spacing:-0.5px;margin-bottom:20px;">Messages</h1>
+
+  <div class="tabs">
+    <div class="tab active" onclick="showMsgTab('alias')">🎭 Alias Chats ({{ alias_convos|length }})</div>
+    <div class="tab" onclick="showMsgTab('public')">👤 Public DMs ({{ public_convos|length }})</div>
+  </div>
+
+  <!-- Alias Conversations -->
+  <div id="msg-alias" class="tab-content">
+    {% if alias_convos %}
+      {% for c in alias_convos %}
+      <a href="/messages/c/{{ c.connection.id }}" class="card card-p" style="margin-bottom:8px;display:flex;align-items:center;gap:14px;padding:14px;{% if c.unread %}border-left:3px solid var(--red);{% endif %}">
+        <div class="av" style="width:44px;height:44px;font-size:16px;background:linear-gradient(135deg,var(--red-dim),var(--bg3));">
+          {% if c.other_reveal_level >= 3 and c.other.avatar_url %}
+            <img src="{{ c.other.avatar_url }}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;"/>
+          {% else %}
+            {{ c.other.alias_name[0] if c.other.alias_name else '?' }}
+          {% endif %}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-family:var(--font-h);font-size:14px;font-weight:600;">
+              {% if c.other_reveal_level >= 2 %}{{ c.other.display_name }}{% else %}{{ c.other.alias_name or 'Unknown' }}{% endif %}
+            </span>
+            {% if c.unread %}<span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></span>{% endif %}
+          </div>
+          {% if c.last_message %}
+          <div style="font-size:12px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            {{ c.last_message.content[:60] }}
+          </div>
+          {% endif %}
+        </div>
+        {% if c.last_message %}
+        <div style="font-family:var(--font-m);font-size:10px;color:var(--text3);flex-shrink:0;">
+          {{ c.last_message.created_at.strftime('%b %d') if c.last_message.created_at else '' }}
+        </div>
+        {% endif %}
+      </a>
+      {% endfor %}
+    {% else %}
+      <div class="card card-p empty">
+        <div class="empty-icon">🎭</div>
+        <div class="empty-title">No alias conversations</div>
+        <div class="empty-sub"><a href="/discover" style="color:var(--red2);">Discover and connect</a> with strangers to start chatting</div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Public DMs -->
+  <div id="msg-public" class="tab-content" style="display:none;">
+    {% if public_convos %}
+      {% for c in public_convos %}
+      <a href="/messages/public/{{ c.other.username }}" class="card card-p" style="margin-bottom:8px;display:flex;align-items:center;gap:14px;padding:14px;{% if c.unread %}border-left:3px solid var(--blue);{% endif %}">
+        {% if c.other.avatar_url %}
+          <img src="{{ c.other.avatar_url }}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt=""/>
+        {% else %}
+          <div class="av" style="width:44px;height:44px;font-size:16px;">{{ c.other.display_name[0] }}</div>
+        {% endif %}
+        <div style="flex:1;min-width:0;">
+          <div style="font-family:var(--font-h);font-size:14px;font-weight:600;">{{ c.other.display_name }}</div>
+          {% if c.last_message %}
+          <div style="font-size:12px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            {{ c.last_message.content[:60] }}
+          </div>
+          {% endif %}
+        </div>
+        {% if c.last_message %}
+        <div style="font-family:var(--font-m);font-size:10px;color:var(--text3);">
+          {{ c.last_message.created_at.strftime('%b %d') if c.last_message.created_at else '' }}
+        </div>
+        {% endif %}
+      </a>
+      {% endfor %}
+    {% else %}
+      <div class="card card-p empty">
+        <div class="empty-icon">💬</div>
+        <div class="empty-title">No public messages</div>
+        <div class="empty-sub">Visit someone's profile and click Message to start a conversation</div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showMsgTab(name) {
+  document.querySelectorAll('.tab-content').forEach(t => t.style.display='none');
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('msg-'+name).style.display='block';
+  event.target.classList.add('active');
+}
+</script>
+{% endblock %}

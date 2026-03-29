@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Zones — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:960px;margin:0 auto;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
+    <div>
+      <h1 style="font-family:var(--font-h);font-size:24px;font-weight:800;letter-spacing:-0.5px;">
+        <span class="gradient-text">Zones</span>
+      </h1>
+      <p style="font-size:13px;color:var(--text3);margin-top:4px;">Communities for every interest</p>
+    </div>
+    <a href="/zones/create" class="btn-primary">+ Create Zone</a>
+  </div>
+
+  <!-- Search -->
+  <form method="get" action="/zones" style="display:flex;gap:10px;margin-bottom:24px;">
+    <input name="q" value="{{ query }}" class="inp" placeholder="Search zones..." style="flex:1;"/>
+    <button type="submit" class="btn-primary">Search</button>
+  </form>
+
+  <!-- Trending -->
+  {% if trending and not query %}
+  <div class="sec-head">🔥 Trending Zones</div>
+  <div style="display:flex;gap:10px;overflow-x:auto;margin-bottom:24px;padding-bottom:4px;">
+    {% for zone in trending[:6] %}
+    <a href="/zones/{{ zone.slug }}" style="min-width:160px;flex-shrink:0;">
+      <div class="card card-p" style="padding:12px;text-align:center;transition:transform 0.2s;">
+        <div style="font-size:24px;margin-bottom:6px;">
+          {% if zone.icon_url %}<img src="{{ zone.icon_url }}" style="width:32px;height:32px;border-radius:8px;object-fit:cover;"/>{% else %}🏘️{% endif %}
+        </div>
+        <div style="font-family:var(--font-h);font-size:13px;font-weight:600;">{{ zone.name }}</div>
+        <div style="font-family:var(--font-m);font-size:10px;color:var(--text3);margin-top:2px;">{{ zone.member_count }} members</div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- All Zones -->
+  <div class="sec-head">{% if query %}Results for "{{ query }}"{% else %}Browse All{% endif %}</div>
+  {% if zones %}
+  <div class="zone-grid">
+    {% for zone in zones %}
+    <a href="/zones/{{ zone.slug }}" class="zone-card fade-in" style="animation-delay:{{ loop.index0 * 0.04 }}s;">
+      <div class="zone-banner">
+        {% if zone.banner_url %}<img src="{{ zone.banner_url }}" alt=""/>{% endif %}
+        <div class="zone-icon">
+          {% if zone.icon_url %}<img src="{{ zone.icon_url }}" alt=""/>{% else %}🏘️{% endif %}
+        </div>
+      </div>
+      <div class="zone-info">
+        <div style="font-family:var(--font-h);font-size:15px;font-weight:600;margin-bottom:4px;">{{ zone.name }}</div>
+        {% if zone.description %}
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">{{ zone.description }}</div>
+        {% endif %}
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);">{{ zone.member_count }} members</span>
+          {% if zone.id in my_zone_ids %}
+          <span class="flair green" style="font-size:9px;">Joined</span>
+          {% endif %}
+          {% if zone.zone_type != 'public' %}
+          <span class="flair neutral" style="font-size:9px;">{{ zone.zone_type }}</span>
+          {% endif %}
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="card card-p empty">
+    <div class="empty-icon">🏘️</div>
+    <div class="empty-title">{% if query %}No zones found{% else %}No zones yet{% endif %}</div>
+    <div class="empty-sub">{% if query %}Try a different search{% else %}<a href="/zones/create" style="color:var(--red2);">Create the first zone</a>{% endif %}</div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

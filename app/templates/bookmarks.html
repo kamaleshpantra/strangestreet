@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Bookmarks — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:680px;margin:0 auto;">
+  <h1 style="font-family:var(--font-h);font-size:22px;font-weight:700;margin-bottom:20px;letter-spacing:-0.3px;">🔖 Bookmarks</h1>
+
+  {% if posts %}
+    {% for post in posts %}
+    <div class="post" style="margin-bottom:10px;">
+      <div class="post-vote"><span class="v-count">{{ post.liked_by|length }}</span></div>
+      <div class="post-body">
+        <div class="post-meta">
+          <a href="/users/{{ post.author.username }}" class="post-author">
+            {% if post.author.avatar_url %}
+              <img src="{{ post.author.avatar_url }}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" alt=""/>
+            {% else %}
+              <div class="av" style="width:20px;height:20px;font-size:8px;">{{ post.author.display_name[0] }}</div>
+            {% endif %}
+            <strong>{{ post.author.display_name }}</strong>
+          </a>
+          <span class="post-time">{{ post.created_at.strftime('%b %d') if post.created_at else '' }}</span>
+        </div>
+        <div class="post-title"><a href="/posts/{{ post.id }}">{{ post.content[:120] }}{% if post.content|length > 120 %}…{% endif %}</a></div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="card card-p empty">
+      <div class="empty-icon">🔖</div>
+      <div class="empty-title">No bookmarks yet</div>
+      <div class="empty-sub">Save posts to find them later</div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
