@@ -35,8 +35,8 @@ app/static/uploads/stories/*
 !app/static/uploads/zones/.gitkeep
 !app/static/uploads/stories/.gitkeep
 
-# ML/Simulation (not needed for deploy)
-ml/
+# ML/Simulation
+# ml is now needed for deploy
 simulation/
 
 # Test files
