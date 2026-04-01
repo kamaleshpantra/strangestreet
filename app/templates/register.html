@@ -5,9 +5,13 @@
   <div style="width:100%;max-width:580px;">
 
     <div style="text-align:center;margin-bottom:28px;">
-      <div style="display:inline-flex;align-items:center;justify-content:center;width:52px;height:52px;background:linear-gradient(135deg,var(--red),#9f1239);border-radius:12px;font-family:var(--font-h);font-size:24px;font-weight:800;color:#fff;margin-bottom:16px;box-shadow:0 4px 20px rgba(220,38,38,0.3);">S</div>
-      <h1 style="font-family:var(--font-h);font-size:24px;font-weight:800;letter-spacing:-0.5px;">Join the Street</h1>
-      <p style="font-size:13px;color:var(--text3);margin-top:4px;">Create your Strange Street account</p>
+      <div style="display:flex;justify-content:center;margin-bottom:12px;">
+        <div style="font-family:var(--font-h);font-size:32px;font-weight:800;letter-spacing:-1px;line-height:60px;height:60px;display:flex;align-items:center;overflow:visible;">
+          <span style="color:var(--red);">S</span>trange Street
+        </div>
+      </div>
+      <h1 style="font-family:var(--font-h);font-size:20px;font-weight:700;letter-spacing:-0.4px;">Join the Street</h1>
+      <p style="font-size:13px;color:var(--text3);margin-top:2px;">Create your account to start connecting</p>
     </div>
 
     <!-- Step Wizard -->
@@ -44,8 +48,26 @@
           </div>
 
           <div style="margin-bottom:14px;">
-            <label class="lbl">Password</label>
-            <input name="password" type="password" class="inp" placeholder="min 6 characters" required minlength="6" id="reg-pass"/>
+            <label class="lbl">Public Bio</label>
+            <textarea name="bio" class="inp" rows="2" placeholder="Tell the world a bit about yourself..." id="reg-bio"></textarea>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;">This will be visible on your public profile.</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div>
+              <label class="lbl">Password</label>
+              <div style="position:relative;">
+                <input name="password" type="password" class="inp" placeholder="min 6 chars" required minlength="6" id="reg-pass"/>
+                <button type="button" onclick="togglePass('reg-pass', this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);font-size:14px;padding:5px;">👁️</button>
+              </div>
+            </div>
+            <div>
+              <label class="lbl">Confirm Password</label>
+              <div style="position:relative;">
+                <input name="confirm_password" type="password" class="inp" placeholder="repeat password" required id="reg-confirm"/>
+                <button type="button" onclick="togglePass('reg-confirm', this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);font-size:14px;padding:5px;">👁️</button>
+              </div>
+            </div>
           </div>
 
           <div style="margin-bottom:14px;">
@@ -162,10 +184,18 @@ function goStep(n) {
     const user = document.getElementById('reg-user');
     const email = document.getElementById('reg-email');
     const pass = document.getElementById('reg-pass');
+    const confirm = document.getElementById('reg-confirm');
+    
     if (!user.value || !email.value || !pass.value || pass.value.length < 6) {
       if (!user.value) user.focus();
       else if (!email.value) email.focus();
       else pass.focus();
+      return;
+    }
+    
+    if (pass.value !== confirm.value) {
+      alert("Passwords do not match!");
+      confirm.focus();
       return;
     }
   }
@@ -204,6 +234,16 @@ function filterInterests(q) {
     const visible = g.querySelectorAll('.pill[style=""], .pill:not([style])');
     g.style.display = visible.length ? '' : 'none';
   });
+}
+function togglePass(id, btn) {
+  const inp = document.getElementById(id);
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🔒';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁️';
+  }
 }
 </script>
 {% endblock %}

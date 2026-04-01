@@ -1,57 +1,124 @@
 {% extends "base.html" %}
 {% block title %}Search — Strange Street{% endblock %}
 {% block content %}
-<div style="max-width:680px;margin:0 auto;">
-  <h1 style="font-family:var(--font-h);font-size:22px;font-weight:700;margin-bottom:20px;letter-spacing:-0.3px;">🔍 Search</h1>
+<div style="max-width:720px;margin:0 auto;">
+  
+  <!-- Search Header -->
+  <div class="card card-p" style="margin-bottom:20px;padding:24px;">
+    <form method="get" action="/search" style="display:flex;gap:10px;">
+      <div style="flex:1;position:relative;">
+        <input name="q" value="{{ query }}" class="inp" placeholder="Search for people or posts..." autofocus style="padding-left:40px;"/>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text3);"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      </div>
+      <input type="hidden" name="t" value="{{ search_type }}"/>
+      <button type="submit" class="btn-primary">Search</button>
+    </form>
 
-  <form method="get" action="/users/search" style="display:flex;gap:10px;margin-bottom:24px;">
-    <input name="q" value="{{ query }}" class="inp" placeholder="Search users by name or username..." autofocus style="flex:1;"/>
-    <button type="submit" class="btn-primary">Search</button>
-  </form>
+    <!-- Tabs -->
+    <div class="tabs" style="margin-top:20px;margin-bottom:0;">
+      <a href="/search?q={{ query }}&t=posts" class="tab {% if search_type == 'posts' %}active{% endif %}">Posts</a>
+      <a href="/search?q={{ query }}&t=people" class="tab {% if search_type == 'people' %}active{% endif %}">People</a>
+    </div>
+  </div>
 
   {% if query %}
-  <div class="sec-head">Results for "{{ query }}"</div>
-  {% endif %}
-
-  {% if results %}
-  <div class="card" style="overflow:hidden;">
-    {% for u in results %}
-    <a href="/users/{{ u.username }}" class="follow-row" style="text-decoration:none;padding:14px 18px;">
-      <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
-        {% if u.avatar_url %}
-          <img src="{{ u.avatar_url }}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt=""/>
-        {% else %}
-          <div class="av" style="width:40px;height:40px;font-size:16px;flex-shrink:0;">{{ u.display_name[0] }}</div>
-        {% endif %}
-        <div style="min-width:0;">
-          <div style="display:flex;align-items:center;gap:6px;">
-            <span style="font-family:var(--font-h);font-size:14px;font-weight:600;">{{ u.display_name }}</span>
-            {% if u.is_verified %}<span class="verified">✓</span>{% endif %}
+    {% if results %}
+      <div class="fade-in">
+        {% if search_type == 'people' %}
+          <div class="card" style="overflow:hidden;">
+            {% for item in results %}
+            {% set u = item.user %}
+            <a href="/users/{{ u.username }}" class="follow-row" style="text-decoration:none;padding:14px 18px;">
+              <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+                {% if u.avatar_url %}
+                  <img src="{{ u.avatar_url }}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt=""/>
+                {% else %}
+                  <div class="av" style="width:44px;height:44px;font-size:18px;flex-shrink:0;">{{ u.display_name[0] }}</div>
+                {% endif %}
+                <div style="min-width:0;">
+                  <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-family:var(--font-h);font-size:15px;font-weight:600;">{{ u.display_name }}</span>
+                    {% if u.is_verified %}<span class="verified">✓</span>{% endif %}
+                  </div>
+                  <div style="font-family:var(--font-m);font-size:11px;color:var(--text3);">u/{{ u.username }}</div>
+                  {% if u.bio %}
+                  <div style="font-size:13px;color:var(--text2);margin-top:4px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;">{{ u.bio }}</div>
+                  {% endif %}
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+                <span class="btn-ghost" style="font-size:11px;padding:4px 10px;border-radius:20px;">View</span>
+              </div>
+            </a>
+            {% endfor %}
           </div>
-          <div style="font-family:var(--font-m);font-size:11px;color:var(--text3);">u/{{ u.username }}</div>
-          {% if u.bio %}
-          <div style="font-size:12px;color:var(--text2);margin-top:2px;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;">{{ u.bio }}</div>
-          {% endif %}
-        </div>
+        {% else %}
+          <!-- Posts list -->
+          {% for post in results %}
+          <div class="post" style="margin-bottom:12px;">
+            <div class="post-vote">
+              <button class="v-btn" onclick="likePost({{ post.id }},this)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+              </button>
+              <span class="v-count" id="lc-{{ post.id }}">{{ post.liked_by|length }}</span>
+            </div>
+            <div class="post-body">
+              <div class="post-meta">
+                <a href="/users/{{ post.author.username }}" class="post-author">
+                  {% if post.author.avatar_url %}
+                    <img src="{{ post.author.avatar_url }}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" alt=""/>
+                  {% else %}
+                    <div class="av" style="width:20px;height:20px;font-size:8px;">{{ post.author.display_name[0] }}</div>
+                  {% endif %}
+                  <strong>{{ post.author.display_name }}</strong>
+                  <span style="color:var(--text3);font-size:11px;">u/{{ post.author.username }}</span>
+                </a>
+                <span class="post-time">{{ post.created_at.strftime('%b %d') if post.created_at else '' }}</span>
+                {% if post.zone %}
+                <span class="flair purple">z/{{ post.zone.name }}</span>
+                {% endif %}
+              </div>
+              <div class="post-title"><a href="/posts/{{ post.id }}">{{ post.content[:160] }}{% if post.content|length > 160 %}...{% endif %}</a></div>
+              
+              {% if post.image_url %}
+              <div class="media-wrap">
+                <img class="media-img" src="{{ post.image_url }}" alt="" onclick="openLightbox(this.src)" style="max-height:280px;"/>
+              </div>
+              {% endif %}
+
+              <div class="post-actions">
+                <a href="/posts/{{ post.id }}#comments" class="act-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  {{ post.comments|length }}
+                </a>
+                <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);margin-left:auto;">Match Score</span>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        {% endif %}
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-        <span style="font-family:var(--font-m);font-size:10px;color:var(--text3);">{{ u.followers|length }} followers</span>
+    {% else %}
+      <div class="card card-p empty">
+        <div class="empty-icon">🔍</div>
+        <div class="empty-title">No results for "{{ query }}"</div>
+        <div class="empty-sub">Try searching for broader terms or check your spelling.</div>
       </div>
-    </a>
-    {% endfor %}
-  </div>
-  {% elif query %}
-  <div class="card card-p empty">
-    <div class="empty-icon">🔍</div>
-    <div class="empty-title">No users found</div>
-    <div class="empty-sub">Try a different search term</div>
-  </div>
+    {% endif %}
   {% else %}
-  <div class="card card-p empty">
-    <div class="empty-icon">🔍</div>
-    <div class="empty-title">Find people on Strange Street</div>
-    <div class="empty-sub">Search by name or username above</div>
-  </div>
+    <div class="card card-p empty">
+      <div class="empty-icon">🏙️</div>
+      <div class="empty-title">Explore Strange Street</div>
+      <div class="empty-sub">Search for people by interest or find posts on any topic.</div>
+    </div>
   {% endif %}
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module">
+  // Reuse feed logic for liking/voting in search results
+  import { initFeed } from '/static/js/feed.js';
+  initFeed();
+</script>
 {% endblock %}

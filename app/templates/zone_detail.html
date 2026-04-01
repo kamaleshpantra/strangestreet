@@ -5,25 +5,27 @@
   <div>
     <!-- Zone Header -->
     <div class="card" style="overflow:hidden;margin-bottom:16px;">
-      <div style="height:120px;background:linear-gradient(135deg,#1a0404,#0d0d2d);position:relative;">
-        {% if zone.banner_url %}<img src="{{ zone.banner_url }}" style="width:100%;height:100%;object-fit:cover;" alt=""/>{% endif %}
+      <div style="height:160px;background:linear-gradient(135deg,#1a0404,#0d0d2d);position:relative;">
+        {% if zone.banner_url %}<img src="{{ zone.banner_url }}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;object-position:center;" onerror="this.style.display='none'" alt=""/>{% endif %}
       </div>
-      <div style="padding:16px 20px;">
-        <div style="display:flex;align-items:center;gap:14px;margin-top:-40px;margin-bottom:14px;">
-          <div style="width:64px;height:64px;border-radius:14px;background:var(--bg2);border:3px solid var(--bg2);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;">
-            {% if zone.icon_url %}<img src="{{ zone.icon_url }}" style="width:100%;height:100%;border-radius:11px;object-fit:cover;"/>{% else %}🏘️{% endif %}
+      <div style="padding:0 0 20px 0;">
+        <div style="display:flex;align-items:flex-end;gap:16px;margin-top:-48px;padding:0 20px;position:relative;z-index:10;">
+          <div style="width:80px;height:80px;border-radius:18px;background:var(--bg1);border:4px solid var(--bg1);display:flex;align-items:center;justify-content:center;font-size:32px;flex-shrink:0;box-shadow:0 8px 16px rgba(0,0,0,0.2);">
+            {% if zone.icon_url %}<img src="{{ zone.icon_url }}" loading="lazy" decoding="async" style="width:100%;height:100%;border-radius:14px;object-fit:cover;" onerror="this.outerHTML='🏘️'" alt=""/>{% else %}🏘️{% endif %}
           </div>
-          <div style="flex:1;">
-            <h1 style="font-family:var(--font-h);font-size:22px;font-weight:800;">{{ zone.name }}</h1>
-            <div style="font-family:var(--font-m);font-size:11px;color:var(--text3);">z/{{ zone.slug }} · {{ zone.member_count }} members</div>
+          <div style="flex:1;padding-bottom:8px;">
+            <h1 style="font-family:var(--font-h);font-size:24px;font-weight:800;margin:0;line-height:1.2;">{{ zone.name }}</h1>
+            <div style="font-family:var(--font-m);font-size:12px;color:var(--text3);margin-top:4px;">z/{{ zone.slug }} · {{ zone.member_count }} members</div>
           </div>
           <button onclick="toggleJoin('{{ zone.slug }}')" class="{% if membership %}btn-ghost{% else %}btn-primary{% endif %}" id="join-btn">
             {{ 'Joined ✓' if membership else 'Join Zone' }}
           </button>
         </div>
-        {% if zone.description %}
-        <p style="font-size:14px;color:var(--text2);line-height:1.6;">{{ zone.description }}</p>
-        {% endif %}
+        <div style="padding:0 20px;">
+          {% if zone.description %}
+          <p style="font-size:15px;color:var(--text2);line-height:1.6;margin-top:12px;">{{ zone.description }}</p>
+          {% endif %}
+        </div>
       </div>
     </div>
 
@@ -37,6 +39,14 @@
             📎 <span>Attach</span>
             <input type="file" name="media" accept="image/*,video/*" style="display:none;"/>
           </label>
+          {% if flairs %}
+          <select name="flair_id" class="inp" style="padding:6px;width:auto;margin-left:10px;font-size:12px;" required>
+            <option value="">Select Flair ▾</option>
+            {% for f in flairs %}
+            <option value="{{ f.id }}">{{ f.name }}</option>
+            {% endfor %}
+          </select>
+          {% endif %}
           <button type="submit" class="btn-primary" style="margin-left:auto;">Post</button>
         </div>
       </form>
@@ -57,7 +67,7 @@
           <div class="post-meta">
             <a href="/users/{{ post.author.username }}" class="post-author">
               {% if post.author.avatar_url %}
-                <img src="{{ post.author.avatar_url }}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" alt=""/>
+                <img src="{{ post.author.avatar_url }}" loading="lazy" decoding="async" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" onerror="this.style.display='none'" alt=""/>
               {% else %}
                 <div class="av" style="width:20px;height:20px;font-size:8px;">{{ post.author.display_name[0] }}</div>
               {% endif %}
@@ -65,6 +75,7 @@
             </a>
             <span class="post-time">{{ post.created_at.strftime('%b %d') if post.created_at else '' }}</span>
             {% if post.is_pinned %}<span class="flair gold" style="font-size:9px;">📌 Pinned</span>{% endif %}
+            {% if post.flair %}<span class="flair" style="font-size:9px;background:{{ post.flair.color_hex }}22;color:{{ post.flair.color_hex }};border:1px solid {{ post.flair.color_hex }}44;">{{ post.flair.name }}</span>{% endif %}
           </div>
           <div class="post-title"><a href="/posts/{{ post.id }}">{{ post.content[:120] }}{% if post.content|length > 120 %}…{% endif %}</a></div>
           {% if post.image_url %}
@@ -72,18 +83,47 @@
             {% if post.media_type == 'video' %}
               <video class="media-video" controls preload="metadata" style="max-height:300px;"><source src="{{ post.image_url }}"></video>
             {% else %}
-              <img class="media-img" src="{{ post.image_url }}" onclick="openLightbox(this.src)" onerror="this.parentElement.style.display='none'" style="max-height:300px;" alt=""/>
+              <img class="media-img" src="{{ post.image_url }}" loading="lazy" decoding="async" onclick="openLightbox(this.src)" onerror="this.parentElement.style.display='none'" style="max-height:300px;" alt=""/>
             {% endif %}
           </div>
           {% endif %}
+
+          <!-- Poll -->
+          {% if post.poll %}
+          <div class="poll-container" style="background:var(--bg3);padding:14px;border-radius:12px;margin-top:12px;border:1px solid var(--border);">
+            <div class="poll-question" style="font-family:var(--font-h);font-size:14px;margin-bottom:12px;">{{ post.poll.question }}</div>
+            {% set total_votes = namespace(val=0) %}
+            {% for opt in post.poll.options %}{% set total_votes.val = total_votes.val + opt.votes|length %}{% endfor %}
+            {% for opt in post.poll.options %}
+              {% set opt_vote_count = opt.votes|length %}
+              {% set pct = ((opt_vote_count / total_votes.val * 100) if total_votes.val > 0 else 0)|round|int %}
+              {% set has_voted = user and (opt.votes|selectattr("user_id", "equalto", user.id)|list|length > 0) %}
+              <div class="poll-option {% if has_voted %}voted{% endif %}"
+                   {% if not has_voted %}onclick="votePoll({{ post.id }},{{ opt.id }})"{% endif %}
+                   style="position:relative;margin-bottom:8px;padding:8px 12px;cursor:{% if has_voted %}default{% else %}pointer{% endif %};background:var(--bg2);border-radius:8px;border:1px solid {% if has_voted %}var(--red){% else %}transparent{% endif %};overflow:hidden;">
+                <div class="poll-fill" style="position:absolute;left:0;top:0;height:100%;width:{{ pct if has_voted else 0 }}%;background:rgba(255,100,100,0.15);z-index:0;transition:width 0.4s ease;"></div>
+                <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+                  <span>{{ opt.text }}</span>
+                  {% if has_voted %}<span class="poll-pct" style="font-size:11px;color:var(--text2);">{{ pct }}%</span>{% endif %}
+                </div>
+              </div>
+            {% endfor %}
+            <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:var(--font-m);">{{ total_votes.val }} votes</div>
+          </div>
+          {% endif %}
+
           <div class="post-actions">
             <a href="/posts/{{ post.id }}#comments" class="act-btn">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
               {{ post.comments|length }}
             </a>
-            {% if membership and membership.role in ['moderator','admin'] %}
+            {% if is_mod or is_admin %}
             <button class="act-btn" onclick="modAction('{{ zone.slug }}',{{ post.id }},'pin')" title="Pin">📌</button>
             <button class="act-btn" onclick="modAction('{{ zone.slug }}',{{ post.id }},'remove')" title="Remove">🗑️</button>
+            <form action="/zones/{{ zone.slug }}/ban/{{ post.author.id }}" method="post" style="display:inline;" onsubmit="return confirm('Ban {{ post.author.username }} from the zone?');">
+              <input type="hidden" name="reason" value="Banned via post moderation">
+              <button type="submit" class="act-btn" title="Ban User" style="color:var(--red);">🔨</button>
+            </form>
             {% endif %}
           </div>
         </div>
@@ -100,6 +140,39 @@
 
   <!-- Sidebar -->
   <div class="sidebar">
+
+    <!-- Flairs Sidebar -->
+    {% if flairs %}
+    <div class="sw">
+      <div class="sw-head">🏷️ Filter by Flair</div>
+      <div class="sw-body">
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          <a href="/zones/{{ zone.slug }}" class="btn-ghost" style="padding:4px 8px;font-size:11px;{% if not active_flair %}background:var(--bg4);{% endif %}">All</a>
+          {% for f in flairs %}
+          <a href="?flair={{ f.id }}" class="btn-ghost" style="padding:4px 8px;font-size:11px;border:1px solid {{ f.color_hex }};color:{% if active_flair|string == f.id|string %}#000{% else %}{{ f.color_hex }}{% endif %};background:{% if active_flair|string == f.id|string %}{{ f.color_hex }}{% else %}transparent{% endif %};">{{ f.name }}</a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Admin/Mod Create Flair Form -->
+    {% if is_mod or is_admin %}
+    <div class="sw">
+      <div class="sw-head" style="color:var(--gold);">⚙️ Mod Tools</div>
+      <div class="sw-body">
+        <form action="/zones/{{ zone.slug }}/flair" method="post" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+          <div style="font-size:12px;font-weight:600;">Create Flair</div>
+          <div style="display:flex;gap:6px;">
+            <input type="text" name="name" class="inp" placeholder="Flair Name" required maxlength="50" style="flex:1;padding:6px;font-size:12px;">
+            <input type="color" name="color" value="#ff3366" style="width:30px;height:30px;border:none;cursor:pointer;padding:0;background:none;">
+          </div>
+          <button type="submit" class="btn-primary" style="font-size:11px;padding:6px;">Add Flair</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
     <!-- Rules -->
     {% if zone.rules %}
     <div class="sw">
@@ -148,22 +221,12 @@
 {% endblock %}
 
 {% block scripts %}
+<script type="module">
+  import { initFeed } from '/static/js/feed.js';
+  initFeed();
+</script>
 <script>
-async function toggleJoin(slug) {
-  const r = await fetch(`/zones/${slug}/join`, {method:'POST'});
-  const d = await r.json();
-  const btn = document.getElementById('join-btn');
-  btn.textContent = d.joined ? 'Joined ✓' : 'Join Zone';
-  btn.className = d.joined ? 'btn-ghost' : 'btn-primary';
-  if (d.error) alert(d.error);
-  else location.reload();
-}
-async function likePost(id,btn) {
-  const r = await fetch(`/posts/${id}/like`, {method:'POST'});
-  const d = await r.json();
-  document.getElementById('lc-'+id).textContent = d.count;
-  btn.classList.toggle('up', d.liked);
-}
+async function toggleJoin(slug){const r=await fetch(`/zones/${slug}/join`,{method:'POST'});const d=await r.json();location.reload();}
 async function modAction(slug, postId, action) {
   if (!confirm(`${action} this post?`)) return;
   await fetch(`/zones/${slug}/moderate/${postId}/${action}`, {method:'POST'});

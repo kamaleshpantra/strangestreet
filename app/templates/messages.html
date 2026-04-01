@@ -30,7 +30,7 @@
           </div>
           {% if c.last_message %}
           <div style="font-size:12px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            {{ c.last_message.content[:60] }}
+            {% if c.last_message.content and c.last_message.content.startswith('E2E::') %}🔒 Encrypted Message{% else %}{{ c.last_message.content[:60] }}{% endif %}
           </div>
           {% endif %}
         </div>
@@ -64,7 +64,7 @@
           <div style="font-family:var(--font-h);font-size:14px;font-weight:600;">{{ c.other.display_name }}</div>
           {% if c.last_message %}
           <div style="font-size:12px;color:var(--text3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            {{ c.last_message.content[:60] }}
+            {% if c.last_message.content and c.last_message.content.startswith('E2E::') %}🔒 Encrypted Message{% else %}{{ c.last_message.content[:60] }}{% endif %}
           </div>
           {% endif %}
         </div>

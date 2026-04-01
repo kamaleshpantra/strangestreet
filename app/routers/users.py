@@ -16,23 +16,19 @@ templates = Jinja2Templates(directory="app/templates")
 AVATAR_DIR = "app/static/uploads/avatars"
 ALLOWED_IMAGE = {".jpg",".jpeg",".png",".gif",".webp",".avif",".bmp",".svg"}
 
+from pydantic import BaseModel
 
-@router.get("/search", response_class=HTMLResponse)
-def search_users(request: Request, q: str = "", db: Session = Depends(get_db)):
-    user = get_current_user(request, db)
-    if not user:
-        return RedirectResponse("/auth/login", status_code=302)
-    results = []
-    if q:
-        results = db.query(User).filter(
-            or_(
-                User.username.ilike(f"%{q}%"),
-                User.display_name.ilike(f"%{q}%"),
-            )
-        ).limit(30).all()
-    return templates.TemplateResponse("search.html", {
-        "request": request, "user": user, "results": results, "query": q
-    })
+class PublicKeySync(BaseModel):
+    public_key: str
+
+@router.post("/me/public-key")
+def sync_public_key(payload: PublicKeySync, request: Request, db: Session = Depends(get_db)):
+    user = require_login(request, db)
+    user.public_key = payload.public_key
+    db.commit()
+    return {"status": "synced"}
+
+
 
 
 @router.get("/bookmarks", response_class=HTMLResponse)
@@ -169,19 +165,30 @@ async def edit_profile(
 
     # Handle avatar upload
     if avatar_file and avatar_file.filename:
-        ext = os.path.splitext(avatar_file.filename)[1].lower()
-        if ext not in ALLOWED_IMAGE:
-            ext = ".jpg"
-        fname = f"{uuid.uuid4().hex}{ext}"
-        os.makedirs(AVATAR_DIR, exist_ok=True)
-        fpath = os.path.join(AVATAR_DIR, fname)
-        with open(fpath, "wb") as f:
-            shutil.copyfileobj(avatar_file.file, f)
-        if user.avatar_url and user.avatar_url.startswith("/static/uploads/avatars/"):
-            old = user.avatar_url.lstrip("/")
-            if os.path.exists(old):
-                os.remove(old)
-        user.avatar_url = f"/static/uploads/avatars/{fname}"
+        from app.utils import compress_image
+        from config import settings
+        
+        # compress_image now returns a URL (Cloudinary) or a filename (local)
+        folder = "strangestreet/avatars"
+        img_result = compress_image(avatar_file, AVATAR_DIR, prefix="av_", max_size=(600, 600), folder=folder)
+        
+        if img_result:
+            # Clean up old avatar
+            if user.avatar_url:
+                if user.avatar_url.startswith("/static/uploads/avatars/"):
+                    old_path = user.avatar_url.lstrip("/")
+                    if os.path.exists(old_path):
+                        os.remove(old_path)
+                elif "res.cloudinary.com" in user.avatar_url:
+                    from app.services.cloudinary_service import CloudinaryService
+                    public_id = CloudinaryService.get_public_id(user.avatar_url)
+                    if public_id:
+                        CloudinaryService.delete_image(public_id)
+
+            if img_result.startswith("http"):
+                user.avatar_url = img_result
+            else:
+                user.avatar_url = f"/static/uploads/avatars/{img_result}"
 
     db.commit()
     return RedirectResponse(f"/users/{username}", status_code=302)

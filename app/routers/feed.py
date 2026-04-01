@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from database import get_db
-from app.models import Post, User, Comment, FeedScore, Zone, ZoneMembership, Story, Reaction
+from app.models import Post, User, Comment, FeedScore, Zone, ZoneMembership, Story, Reaction, ZoneScore
 from app.auth import get_current_user
 from datetime import datetime, timezone
 
@@ -49,8 +49,17 @@ def home(request: Request, db: Session = Depends(get_db)):
     viewed = [v for v in story_users.values() if v["all_viewed"]]
     ordered_stories.extend(unviewed + viewed)
 
-    # Trending zones
-    trending_zones = db.query(Zone).order_by(desc(Zone.member_count)).limit(5).all()
+    # Zone Suggestions (SNA-based)
+    zone_suggestions = db.query(Zone).join(
+        ZoneScore, ZoneScore.zone_id == Zone.id
+    ).filter(
+        ZoneScore.user_id == user.id
+    ).order_by(desc(ZoneScore.score)).limit(5).all()
+
+    if not zone_suggestions:
+        # Fallback to Trending zones if no ML scores are available
+        zone_suggestions = db.query(Zone).order_by(desc(Zone.member_count)).limit(5).all()
+
 
     return templates.TemplateResponse("home.html", {
         "request":   request,
@@ -59,7 +68,7 @@ def home(request: Request, db: Session = Depends(get_db)):
         "suggested": suggested,
         "story_users": ordered_stories,
         "has_my_story": any(s.user_id == user.id for s in active_stories),
-        "trending_zones": trending_zones,
+        "zone_suggestions": zone_suggestions,
     })
 
 
@@ -70,6 +79,18 @@ def get_smart_feed(user: User, db: Session):
 
     if ml_scores:
         post_ids = [s.post_id for s in ml_scores]
+
+        # Safety filter: exclude posts with high toxicity
+        from app.models import PostFeature
+        toxic_ids = set()
+        toxic_features = db.query(PostFeature).filter(
+            PostFeature.post_id.in_(post_ids),
+            PostFeature.toxicity_score > 0.3,
+        ).all()
+        toxic_ids = {pf.post_id for pf in toxic_features}
+
+        safe_ids = [pid for pid in post_ids if pid not in toxic_ids]
+
         posts_by_id = {
             p.id: p for p in db.query(Post).options(
                 joinedload(Post.author),
@@ -77,9 +98,9 @@ def get_smart_feed(user: User, db: Session):
                 joinedload(Post.comments),
                 joinedload(Post.reactions),
                 joinedload(Post.zone),
-            ).filter(Post.id.in_(post_ids), Post.is_flagged == False).all()
+            ).filter(Post.id.in_(safe_ids), Post.is_flagged == False).all()
         }
-        return [posts_by_id[pid] for pid in post_ids if pid in posts_by_id]
+        return [posts_by_id[pid] for pid in safe_ids if pid in posts_by_id]
 
     followed_ids = [u.id for u in user.following] + [user.id]
 

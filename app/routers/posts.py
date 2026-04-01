@@ -59,43 +59,16 @@ async def create_post(
     db: Session         = Depends(get_db),
 ):
     user = require_login(request, db)
-    media_url = None
-    media_type = None
+    
+    zone_id_int = int(zone_id) if zone_id and zone_id.isdigit() else None
+    options_list = [o.strip() for o in poll_options.split(",") if o.strip()]
 
-    if media and media.filename:
-        ext = os.path.splitext(media.filename)[1].lower()
-        if ext not in ALLOWED_EXT:
-            ext = ext or ".bin"
-        fname = f"{uuid.uuid4().hex}{ext}"
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        fpath = os.path.join(UPLOAD_DIR, fname)
-        with open(fpath, "wb") as f:
-            shutil.copyfileobj(media.file, f)
-        media_url = f"/static/uploads/posts/{fname}"
-        media_type = "video" if ext in VIDEO_EXT else "image"
-
-    post = Post(
-        content=content,
-        category=category,
-        user_id=user.id,
-        image_url=media_url,
-        media_type=media_type,
-        zone_id=int(zone_id) if zone_id and zone_id.isdigit() else None,
+    from app.services.post_service import PostService
+    post = PostService.create_post(
+        db=db, user_id=user.id, content=content, category=category,
+        zone_id=zone_id_int, poll_question=poll_question.strip(), 
+        poll_options=options_list, media=media
     )
-    db.add(post)
-    db.flush()
-
-    # Create poll if provided
-    if poll_question.strip() and poll_options.strip():
-        options_list = [o.strip() for o in poll_options.split(",") if o.strip()]
-        if len(options_list) >= 2:
-            poll = Poll(post_id=post.id, question=poll_question.strip())
-            db.add(poll)
-            db.flush()
-            for opt_text in options_list:
-                db.add(PollOption(poll_id=poll.id, text=opt_text))
-
-    db.commit()
 
     if post.zone_id:
         from app.models import Zone
@@ -138,6 +111,15 @@ def view_post(post_id: int, request: Request, db: Session = Depends(get_db)):
     reaction_counts = {}
     for r in post.reactions:
         reaction_counts[r.type] = reaction_counts.get(r.type, 0) + 1
+
+    # Build comment replies tree
+    comment_map = {}
+    for c in post.comments:
+        c.replies = []
+        comment_map[c.id] = c
+    for c in post.comments:
+        if c.parent_id and c.parent_id in comment_map:
+            comment_map[c.parent_id].replies.append(c)
 
     return templates.TemplateResponse("post_detail.html", {
         "request": request, "user": user, "post": post,
@@ -232,13 +214,14 @@ def bookmark_post(post_id: int, request: Request, db: Session = Depends(get_db))
 def add_comment(
     post_id: int, request: Request,
     content: str = Form(...),
+    parent_id: int = Form(None),
     db: Session  = Depends(get_db),
 ):
     user = require_login(request, db)
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404)
-    db.add(Comment(content=content, user_id=user.id, post_id=post_id))
+    db.add(Comment(content=content, user_id=user.id, post_id=post_id, parent_id=parent_id))
     log_interaction(db, user.id, post_id, "comment")
 
     if post.user_id != user.id:
@@ -283,28 +266,11 @@ def vote_poll(post_id: int, option_id: int, request: Request, db: Session = Depe
 @router.post("/{post_id}/delete")
 def delete_post(post_id: int, request: Request, db: Session = Depends(get_db)):
     user = require_login(request, db)
-    post = db.query(Post).filter(Post.id == post_id).first()
-    if not post or post.user_id != user.id:
+    
+    from app.services.post_service import PostService
+    success = PostService.delete_post(db, post_id, user.id)
+    if not success:
         raise HTTPException(status_code=403)
-
-    # Clean up media file
-    if post.image_url and post.image_url.startswith("/static/uploads/posts/"):
-        fpath = os.path.join("app", post.image_url.lstrip("/"))
-        if os.path.exists(fpath):
-            os.remove(fpath)
-
-    # Clean up non-cascaded dependencies
-    from app.models import InteractionLog, FeedScore, Notification, post_likes
-    db.query(InteractionLog).filter(InteractionLog.post_id == post_id).delete()
-    db.query(FeedScore).filter(FeedScore.post_id == post_id).delete()
-    db.query(Notification).filter(
-        Notification.reference_id == post_id,
-        Notification.reference_type == "post",
-    ).delete()
-    db.execute(post_likes.delete().where(post_likes.c.post_id == post_id))
-
-    # Post itself (cascades to comments, reactions, bookmarks, poll)
-    db.delete(post)
-    db.commit()
+        
     return RedirectResponse("/", status_code=302)
 

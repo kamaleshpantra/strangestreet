@@ -35,7 +35,9 @@ def register(
     username: str     = Form(...),
     email: str        = Form(...),
     password: str     = Form(...),
+    confirm_password: str = Form(...),
     display_name: str = Form(""),
+    bio: str          = Form(""),
     relationship_status: str = Form(""),
     alias_name: str = Form(""),
     alias_bio: str = Form(""),
@@ -50,6 +52,12 @@ def register(
         if i.category not in categories:
             categories[i.category] = []
         categories[i.category].append(i)
+
+    # Validate passwords match
+    if password != confirm_password:
+        return templates.TemplateResponse("register.html", {
+            "request": request, "error": "Passwords do not match.", "categories": categories,
+        })
 
     # Check duplicates
     if db.query(User).filter(User.username == username).first():
@@ -66,6 +74,7 @@ def register(
         email=email,
         hashed_password=hash_password(password),
         display_name=display_name or username,
+        bio=bio,
         relationship_status=relationship_status or None,
         alias_name=alias_name or f"stranger_{username[:8]}",
         alias_bio=alias_bio or None,

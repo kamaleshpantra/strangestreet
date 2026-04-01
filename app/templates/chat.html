@@ -58,11 +58,35 @@
   {% endif %}
 
   <!-- Messages -->
-  <div class="card" style="border-radius:0;border-top:none;min-height:400px;max-height:500px;overflow-y:auto;padding:16px;" id="msg-body">
+  <style>
+    .msg-del { position:absolute; top:-8px; right:-8px; background:var(--red2); color:#fff; border:none; border-radius:50%; width:22px; height:22px; display:none; align-items:center; justify-content:center; cursor:pointer; font-size:10px; box-shadow:0 2px 8px rgba(0,0,0,0.3); transition:transform 0.1s;}
+    .msg-del:hover { transform:scale(1.1); }
+    .msg-bubble { position:relative; }
+    .msg-bubble.sent:hover .msg-del { display:flex; }
+    .msg-media { border-radius:8px; margin-top:6px; max-width:100%; object-fit:contain; border:1px solid rgba(255,255,255,0.1); cursor:zoom-in; }
+    .msg-file { display:flex; align-items:center; gap:8px; padding:10px; background:rgba(255,255,255,0.05); border-radius:8px; margin-top:6px; color:var(--text); font-size:13px; font-family:var(--font-m); }
+    .msg-file:hover { background:rgba(255,255,255,0.1); }
+  </style>
+  <div class="card" style="border-radius:0;border-top:none;min-height:400px;max-height:500px;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;" id="msg-body">
     {% if messages %}
       {% for msg in messages %}
-      <div class="msg-bubble {% if msg.sender_id == user.id %}sent{% else %}received{% endif %}">
-        {{ msg.content }}
+      <div class="msg-bubble {% if msg.sender_id == user.id %}sent{% else %}received{% endif %}" id="msg-{{ msg.id }}">
+        {% if msg.sender_id == user.id %}
+          <button class="msg-del" onclick="deleteMessage({{ msg.id }})" title="Delete Message">✕</button>
+        {% endif %}
+        <div class="msg-text" data-content="{{ msg.content }}">{% if msg.content and msg.content.startswith('E2E::') %}🔒 Decrypting...{% else %}{{ msg.content }}{% endif %}</div>
+        
+        {% if msg.media_url %}
+          {% if msg.media_type == 'image' %}
+            <img class="msg-media" src="{{ msg.media_url }}" loading="lazy" decoding="async" onclick="openLightbox(this.src)" style="max-height:200px;"/>
+          {% elif msg.media_type == 'video' %}
+            <video class="msg-media" style="max-height:200px;" controls preload="metadata"><source src="{{ msg.media_url }}"></video>
+          {% else %}
+            <a href="{{ msg.media_url }}" download class="msg-file">
+              <span style="font-size:16px;">📄</span> {{ msg.file_name or "Download File" }}
+            </a>
+          {% endif %}
+        {% endif %}
         <div class="msg-time">{{ msg.created_at.strftime('%I:%M %p · %b %d') if msg.created_at else '' }}</div>
       </div>
       {% endfor %}
@@ -75,29 +99,45 @@
   </div>
 
   <!-- Input -->
-  <div class="card" style="border-radius:0 0 var(--r) var(--r);border-top:none;">
+  <div class="card" style="border-radius:0 0 var(--r) var(--r);border-top:none;position:relative;">
     <form action="{% if is_alias %}/messages/c/{{ connection.id }}/send{% else %}/messages/public/{{ other.username }}/send{% endif %}"
-          method="post" style="display:flex;gap:10px;padding:12px;">
-      <input name="content" type="text" class="inp" placeholder="Type a message..." required autofocus autocomplete="off" style="flex:1;"/>
+          method="post" enctype="multipart/form-data" style="display:flex;gap:10px;padding:12px;align-items:center;">
+      
+      <label style="cursor:pointer;color:var(--text2);font-size:20px;padding:6px;transition:color 0.15s;" title="Attach File">
+        📎
+        <input type="file" name="media" id="media-input" style="display:none;" onchange="updateFileName(this)"/>
+      </label>
+      
+      <button type="button" id="emoji-trigger" style="background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer;padding:6px;" title="Emojis">
+        😀
+      </button>
+
+      <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
+        <div id="file-preview" style="font-size:11px;color:var(--red3);display:none;font-family:var(--font-m);"></div>
+        <input name="content" id="msg-input" type="text" class="inp" placeholder="Type a message..." autocomplete="off" style="width:100%;"/>
+      </div>
+      
       <button type="submit" class="btn-primary" style="flex-shrink:0;">Send</button>
     </form>
+    
+    <!-- Emoji Container -->
+    <div id="emoji-picker-container" style="position:absolute;bottom:65px;left:10px;display:none;z-index:999;box-shadow:0 8px 32px rgba(0,0,0,0.6);border-radius:8px;overflow:hidden;border:1px solid var(--border);"></div>
   </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-// Auto-scroll to bottom
-const body = document.getElementById('msg-body');
-body.scrollTop = body.scrollHeight;
-
-{% if is_alias and connection %}
-async function revealNext() {
-  if (!confirm('Are you sure? This will reveal your info to the other person.')) return;
-  const r = await fetch(`/connections/{{ connection.id }}/reveal`, {method:'POST'});
-  const d = await r.json();
-  location.reload();
-}
-{% endif %}
+<script type="module">
+  import { initChatScroll, initChatForm, initEmojiPicker, decryptChatFeed } from '/static/js/chat.js';
+  
+  // Initialize UI Features
+  initChatScroll();
+  
+  const recipientPubKey = {{ (other.public_key or '') | tojson | safe }};
+  initChatForm(recipientPubKey);
+  
+  initEmojiPicker();
+  
+  decryptChatFeed('{{ user.username }}');
 </script>
 {% endblock %}

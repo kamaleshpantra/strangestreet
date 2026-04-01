@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc, func as sqlfunc
 from database import get_db
-from app.models import User, Post, Zone, ZoneMembership, Notification, Comment
+from app.models import User, Post, Zone, ZoneMembership, Notification, Comment, ZoneFlair, ZoneBan
 from app.auth import require_login, get_current_user
 import shutil, os, uuid, re
 
@@ -42,9 +42,24 @@ def zones_page(request: Request, q: str = "", db: Session = Depends(get_db)):
     ).all()
     my_zone_ids = {m.zone_id for m in my_memberships}
 
+    # ML-recommended zones
+    from app.models import ZoneScore
+    recommended_zones = []
+    zone_scores = db.query(ZoneScore).filter(
+        ZoneScore.user_id == user.id,
+        ZoneScore.zone_id.notin_(my_zone_ids) if my_zone_ids else True,
+    ).order_by(desc(ZoneScore.score)).limit(6).all()
+    if zone_scores:
+        rec_zone_ids = [zs.zone_id for zs in zone_scores]
+        rec_zones_by_id = {
+            z.id: z for z in db.query(Zone).filter(Zone.id.in_(rec_zone_ids)).all()
+        }
+        recommended_zones = [rec_zones_by_id[zid] for zid in rec_zone_ids if zid in rec_zones_by_id]
+
     return templates.TemplateResponse("zones.html", {
         "request": request, "user": user,
         "zones": zones, "trending": trending,
+        "recommended_zones": recommended_zones,
         "my_zone_ids": my_zone_ids, "query": q,
     })
 
@@ -85,21 +100,21 @@ async def create_zone(
     icon_url = None
     banner_url = None
 
-    os.makedirs(ZONE_UPLOAD_DIR, exist_ok=True)
-    for upload, prefix in [(icon_file, "icon"), (banner_file, "banner")]:
-        if upload and upload.filename:
-            ext = os.path.splitext(upload.filename)[1].lower()
-            if ext not in ALLOWED_IMAGE:
-                ext = ".jpg"
-            fname = f"{prefix}_{uuid.uuid4().hex}{ext}"
-            fpath = os.path.join(ZONE_UPLOAD_DIR, fname)
-            with open(fpath, "wb") as f:
-                shutil.copyfileobj(upload.file, f)
-            url = f"/static/uploads/zones/{fname}"
-            if prefix == "icon":
-                icon_url = url
-            else:
-                banner_url = url
+    from app.utils import compress_image
+    from app.services.cloudinary_service import CloudinaryService
+    from config import settings
+    
+    # Process Icon
+    if icon_file and icon_file.filename:
+        res = compress_image(icon_file, ZONE_UPLOAD_DIR, prefix="icon_", max_size=(400, 400), folder="strangestreet/zones")
+        if res:
+            icon_url = res if res.startswith("http") else f"/static/uploads/zones/{res}"
+        
+    # Process Banner
+    if banner_file and banner_file.filename:
+        res = compress_image(banner_file, ZONE_UPLOAD_DIR, prefix="banner_", max_size=(1600, 800), folder="strangestreet/zones")
+        if res:
+            banner_url = res if res.startswith("http") else f"/static/uploads/zones/{res}"
 
     zone = Zone(
         name=name, slug=slug, description=description,
@@ -125,21 +140,46 @@ def zone_detail(slug: str, request: Request, db: Session = Depends(get_db)):
     if not zone:
         raise HTTPException(status_code=404, detail="Zone not found")
 
-    membership = db.query(ZoneMembership).filter(
-        ZoneMembership.zone_id == zone.id,
-        ZoneMembership.user_id == user.id,
-    ).first()
+    # Check if user is banned
+    is_admin = False
+    is_mod = False
+    
+    if user:
+        ban = db.query(ZoneBan).filter(ZoneBan.zone_id == zone.id, ZoneBan.user_id == user.id).first()
+        if ban:
+            return HTMLResponse(f"<div style='padding:50px;text-align:center;'><h2>You have been banned from this Zone</h2><p>Reason: {ban.reason}</p></div>", status_code=403)
+            
+        membership = db.query(ZoneMembership).filter(
+            ZoneMembership.zone_id == zone.id,
+            ZoneMembership.user_id == user.id,
+        ).first()
+        
+        if membership:
+            if membership.role == 'admin': is_admin = True
+            elif membership.role == 'moderator': is_mod = True
+    else:
+        membership = None
 
-    # Zone posts
-    posts = db.query(Post).options(
+    flairs = db.query(ZoneFlair).filter(ZoneFlair.zone_id == zone.id).all()
+
+    # Zone posts, order by pinned then creation
+    posts_query = db.query(Post).options(
         joinedload(Post.author),
         joinedload(Post.liked_by),
         joinedload(Post.comments),
         joinedload(Post.reactions),
+        joinedload(Post.flair),
     ).filter(
         Post.zone_id == zone.id,
         Post.is_flagged == False,
-    ).order_by(desc(Post.created_at)).limit(50).all()
+    )
+    
+    # Filter by flair if requested
+    flair_filter = request.query_params.get("flair")
+    if flair_filter and flair_filter.isdigit():
+        posts_query = posts_query.filter(Post.flair_id == int(flair_filter))
+
+    posts = posts_query.order_by(desc(Post.is_pinned), desc(Post.created_at)).limit(50).all()
 
     # Moderators
     mods = db.query(ZoneMembership).filter(
@@ -150,6 +190,8 @@ def zone_detail(slug: str, request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("zone_detail.html", {
         "request": request, "user": user, "zone": zone,
         "membership": membership, "posts": posts, "mods": mods,
+        "flairs": flairs, "is_admin": is_admin, "is_mod": is_mod,
+        "active_flair": flair_filter,
     })
 
 
@@ -204,25 +246,55 @@ async def create_zone_post(
     if not membership:
         raise HTTPException(status_code=403, detail="Must join zone to post")
 
+    # Flair enforcement
+    flair_id_int = None
+    flairs_exist = db.query(ZoneFlair).filter(ZoneFlair.zone_id == zone.id).count() > 0
+    if flairs_exist:
+        raw_flair = request.query_params.get("flair_id") or (await request.form()).get("flair_id")
+        if not raw_flair:
+            return RedirectResponse(f"/zones/{slug}?error=A flair is required to post here", status_code=302)
+        flair_id_int = int(raw_flair)
+
     media_url = None
     media_type = None
     UPLOAD_DIR = "app/static/uploads/posts"
     VIDEO_EXT = {".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"}
 
     if media and media.filename:
+        from app.utils import compress_image
+        from config import settings
+        from app.services.cloudinary_service import CloudinaryService
+        
         ext = os.path.splitext(media.filename)[1].lower()
-        fname = f"{uuid.uuid4().hex}{ext}"
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-        fpath = os.path.join(UPLOAD_DIR, fname)
-        with open(fpath, "wb") as f:
-            shutil.copyfileobj(media.file, f)
-        media_url = f"/static/uploads/posts/{fname}"
-        media_type = "video" if ext in VIDEO_EXT else "image"
+        is_video = ext in VIDEO_EXT
+        
+        # 1. Try Cloudinary
+        if settings.CLOUDINARY_CLOUD_NAME:
+            media_url = CloudinaryService.upload_image(media.file, folder="strangestreet/posts")
+            if media_url:
+                media_type = "video" if is_video else "image"
+        
+        # 2. Local Fallback
+        if not media_url:
+            UPLOAD_DIR = "app/static/uploads/posts"
+            if is_video:
+                fname = f"{uuid.uuid4().hex}{ext}"
+                os.makedirs(UPLOAD_DIR, exist_ok=True)
+                fpath = os.path.join(UPLOAD_DIR, fname)
+                with open(fpath, "wb") as f:
+                    shutil.copyfileobj(media.file, f)
+                media_url = f"/static/uploads/posts/{fname}"
+            else:
+                res = compress_image(media, UPLOAD_DIR, max_size=(1600, 1600))
+                if res:
+                    media_url = res if res.startswith("http") else f"/static/uploads/posts/{res}"
+            
+            media_type = "video" if is_video else "image"
 
     post = Post(
         content=content, user_id=user.id, zone_id=zone.id,
         image_url=media_url, media_type=media_type,
-        category=zone.name,
+        category=zone.name, flair_id=flair_id_int,
     )
     db.add(post)
     db.commit()
@@ -263,3 +335,46 @@ def moderate_post(
 
     db.commit()
     return JSONResponse({"status": "ok", "action": action})
+
+
+@router.post("/{slug}/flair")
+def create_flair(
+    slug: str, request: Request, name: str = Form(...), color: str = Form("#4B5563"),
+    db: Session = Depends(get_db),
+):
+    user = require_login(request, db)
+    zone = db.query(Zone).filter(Zone.slug == slug).first()
+    if not zone: raise HTTPException(status_code=404)
+    
+    membership = db.query(ZoneMembership).filter(
+        ZoneMembership.zone_id == zone.id, ZoneMembership.user_id == user.id,
+        ZoneMembership.role.in_(["moderator", "admin"])
+    ).first()
+    if not membership: raise HTTPException(status_code=403)
+    
+    flair = ZoneFlair(zone_id=zone.id, name=name[:50], color_hex=color[:7])
+    db.add(flair)
+    db.commit()
+    return RedirectResponse(f"/zones/{slug}", status_code=302)
+
+
+@router.post("/{slug}/ban/{banned_user_id}")
+def ban_user(
+    slug: str, banned_user_id: int, request: Request,
+    reason: str = Form("Violated zone rules"), db: Session = Depends(get_db),
+):
+    user = require_login(request, db)
+    zone = db.query(Zone).filter(Zone.slug == slug).first()
+    if not zone: raise HTTPException(status_code=404)
+    
+    membership = db.query(ZoneMembership).filter(
+        ZoneMembership.zone_id == zone.id, ZoneMembership.user_id == user.id,
+        ZoneMembership.role.in_(["moderator", "admin"])
+    ).first()
+    if not membership: raise HTTPException(status_code=403)
+    
+    db.add(ZoneBan(zone_id=zone.id, user_id=banned_user_id, reason=reason))
+    # Also kick them from the membership table
+    db.query(ZoneMembership).filter(ZoneMembership.zone_id == zone.id, ZoneMembership.user_id == banned_user_id).delete()
+    db.commit()
+    return RedirectResponse(f"/zones/{slug}", status_code=302)
