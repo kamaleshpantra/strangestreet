@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}StreetPass Premium — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:800px;margin:0 auto;">
+  <div style="text-align:center;margin-bottom:32px;">
+    <h1 style="font-family:var(--font-h);font-size:32px;font-weight:800;letter-spacing:-1px;">
+      <span class="gradient-text">StreetPass ➕</span>
+    </h1>
+    <p style="font-size:15px;color:var(--text3);margin-top:8px;">Elevate your connections, dominate the feed, and unlock premium tools.</p>
+  </div>
+
+  <div class="two-col" style="grid-template-columns:1fr 1fr;">
+    <!-- Subscription Card -->
+    <div class="card card-p" style="border-color:var(--gold);box-shadow:0 0 40px rgba(251,191,36,0.1);position:relative;overflow:hidden;">
+      <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--gold),#f59e0b);"></div>
+      <div style="font-family:var(--font-h);font-size:20px;font-weight:700;margin-bottom:4px;color:var(--gold);">StreetPass Plus</div>
+      <div style="font-size:24px;font-family:var(--font-m);font-weight:700;margin-bottom:16px;">$9.99<span style="font-size:12px;color:var(--text3);font-weight:400;">/mo</span></div>
+      
+      <ul style="list-style:none;padding:0;margin-bottom:24px;font-size:13px;color:var(--text2);display:flex;flex-direction:column;gap:10px;">
+        <li>✨ Animated Premium Avatar Border</li>
+        <li>🚀 2x Reach Algorithm Boost on Posts</li>
+        <li>💬 Unlimited Daily Alias Reveals</li>
+        <li>🔐 Read Receipts for E2E Messages</li>
+      </ul>
+      
+      {% if user.is_premium %}
+        <button class="btn-primary" style="width:100%;justify-content:center;background:var(--bg3);color:var(--text);box-shadow:none;" disabled>Active Subscriber</button>
+      {% else %}
+      <form action="/economy/subscribe-premium" method="post">
+        <button type="submit" class="btn-primary" style="width:100%;justify-content:center;background:linear-gradient(135deg,var(--gold),#d97706);color:#000;">Upgrade to Plus</button>
+      </form>
+      {% endif %}
+    </div>
+
+    <!-- Street Coins Card -->
+    <div class="card card-p">
+      <div style="font-family:var(--font-h);font-size:20px;font-weight:700;margin-bottom:4px;color:var(--orange);">Street Coins</div>
+      <div style="font-size:13px;color:var(--text3);margin-bottom:16px;">Super Like content to pin it in someone's Zone (costs 10 Coins)</div>
+      
+      <div style="background:var(--bg3);padding:12px;border-radius:8px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:14px;font-weight:600;">Your Balance:</span>
+        <span class="flair gold" style="font-size:14px;font-weight:700;">🪙 {{ user.street_coins }}</span>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <form action="/economy/buy-coins" method="post" style="display:flex;gap:8px;">
+          <input type="hidden" name="amount" value="100">
+          <button type="submit" class="btn-ghost" style="flex:1;justify-content:space-between;"><span>100 Coins</span> <span style="font-family:var(--font-m);">$1.99</span></button>
+        </form>
+        <form action="/economy/buy-coins" method="post" style="display:flex;gap:8px;">
+          <input type="hidden" name="amount" value="500">
+          <button type="submit" class="btn-ghost" style="flex:1;justify-content:space-between;border-color:var(--orange);color:var(--orange);"><span>500 Coins</span> <span style="font-family:var(--font-m);">$7.99</span></button>
+        </form>
+        <form action="/economy/buy-coins" method="post" style="display:flex;gap:8px;">
+          <input type="hidden" name="amount" value="1000">
+          <button type="submit" class="btn-ghost" style="flex:1;justify-content:space-between;"><span>1000 Coins</span> <span style="font-family:var(--font-m);">$14.99</span></button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

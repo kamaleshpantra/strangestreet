@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}ML Pipeline Admin — Strange Street{% endblock %}
+{% block content %}
+<div style="max-width:900px;margin:0 auto;">
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;">
+      <h2 style="margin:0;">ML Pipeline Admin</h2>
+      <a href="/" class="btn-ghost">← Back</a>
+    </div>
+  </div>
+
+  <!-- Stats Grid -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="sec-head">Platform Statistics</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px;margin-top:12px;">
+      <div style="text-align:center;padding:16px;background:var(--bg3);border-radius:var(--r);">
+        <div style="font-size:28px;font-weight:700;color:var(--red);">{{ stats.users }}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px;">Users</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--bg3);border-radius:var(--r);">
+        <div style="font-size:28px;font-weight:700;color:var(--blue);">{{ stats.posts }}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px;">Posts</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--bg3);border-radius:var(--r);">
+        <div style="font-size:28px;font-weight:700;color:var(--green);">{{ stats.interactions }}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px;">Interactions</div>
+      </div>
+      <div style="text-align:center;padding:16px;background:var(--bg3);border-radius:var(--r);">
+        <div style="font-size:28px;font-weight:700;color:var(--purple);">{{ stats.feed_scores }}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:4px;">Feed Scores</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline Control -->
+  <div class="card" style="margin-bottom:20px;">
+    <div class="sec-head">Pipeline Control</div>
+    <div style="margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;">
+      <button id="run-btn" class="btn-primary" onclick="runPipeline(false)">
+        ▶ Run Full Pipeline
+      </button>
+      <button class="btn-ghost" onclick="runPipeline(true)">
+        ⚡ Run Without Safety Check
+      </button>
+    </div>
+    <div id="run-status" style="margin-top:16px;display:none;">
+      <div style="padding:12px;background:var(--bg3);border-radius:var(--r);">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span id="status-icon">⏳</span>
+          <strong id="status-text">Pipeline running...</strong>
+        </div>
+        <div class="progress-bar" style="height:8px;background:var(--bg);border-radius:4px;overflow:hidden;">
+          <div id="progress-fill" style="height:100%;background:var(--red);width:0%;transition:width 0.3s;"></div>
+        </div>
+        <div id="progress-text" style="font-size:11px;color:var(--text3);margin-top:6px;text-align:center;">0 / 7 steps</div>
+        <div id="duration-text" style="font-size:11px;color:var(--text3);margin-top:4px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pipeline History -->
+  <div class="card">
+    <div class="sec-head">Pipeline History</div>
+    {% if runs %}
+    <div style="margin-top:12px;">
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--border);">
+            <th style="text-align:left;padding:8px;color:var(--text3);">ID</th>
+            <th style="text-align:left;padding:8px;color:var(--text3);">Status</th>
+            <th style="text-align:left;padding:8px;color:var(--text3);">Progress</th>
+            <th style="text-align:left;padding:8px;color:var(--text3);">Duration</th>
+            <th style="text-align:left;padding:8px;color:var(--text3);">Triggered</th>
+            <th style="text-align:left;padding:8px;color:var(--text3);">Started</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for run in runs %}
+          <tr style="border-bottom:1px solid var(--border2);">
+            <td style="padding:10px 8px;">#{{ run.id }}</td>
+            <td style="padding:10px 8px;">
+              {% if run.status == 'success' %}
+                <span style="color:var(--green);">✓ Success</span>
+              {% elif run.status == 'running' %}
+                <span style="color:var(--blue);">⟳ Running</span>
+              {% elif run.status == 'failed' %}
+                <span style="color:var(--red);">✗ Failed</span>
+              {% else %}
+                <span style="color:var(--text3);">○ Pending</span>
+              {% endif %}
+            </td>
+            <td style="padding:10px 8px;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden;max-width:80px;">
+                  <div style="height:100%;background:var(--red);width:{{ (run.steps_completed / run.total_steps * 100) | int }}%;"></div>
+                </div>
+                <span style="color:var(--text3);font-size:11px;">{{ run.steps_completed }}/{{ run.total_steps }}</span>
+              </div>
+            </td>
+            <td style="padding:10px 8px;color:var(--text2);">
+              {% if run.duration_sec %}
+                {{ "%.1f"|format(run.duration_sec) }}s
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td style="padding:10px 8px;color:var(--text3);font-size:11px;">{{ run.triggered_by or 'manual' }}</td>
+            <td style="padding:10px 8px;color:var(--text3);font-size:11px;">{{ run.started_at.strftime('%b %d %H:%M') if run.started_at else '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:40px;color:var(--text3);">
+      No pipeline runs yet. Click "Run Full Pipeline" to start.
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentRunId = null;
+let pollInterval = null;
+
+async function runPipeline(skipSafety) {
+  const btn = document.getElementById('run-btn');
+  const statusDiv = document.getElementById('run-status');
+  btn.disabled = true;
+  btn.textContent = 'Starting...';
+  statusDiv.style.display = 'block';
+  updateStatusUI('running', 0, 7);
+
+  try {
+    const res = await fetch('/admin/ml/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skip_safety: skipSafety })
+    });
+    const data = await res.json();
+    
+    if (data.run_id) {
+      currentRunId = data.run_id;
+      startPolling();
+    } else {
+      updateStatusUI('failed', 0, 7, data.error || 'Failed to start pipeline');
+      btn.disabled = false;
+      btn.textContent = '▶ Run Full Pipeline';
+    }
+  } catch (e) {
+    updateStatusUI('failed', 0, 7, e.message);
+    btn.disabled = false;
+    btn.textContent = '▶ Run Full Pipeline';
+  }
+}
+
+function startPolling() {
+  pollInterval = setInterval(async () => {
+    if (!currentRunId) return;
+    
+    try {
+      const res = await fetch(`/admin/ml/status/${currentRunId}`);
+      const data = await res.json();
+      
+      updateStatusUI(data.status, data.steps_completed, data.total_steps);
+      
+      if (data.duration_sec !== null) {
+        document.getElementById('duration-text').textContent = `Completed in ${data.duration_sec.toFixed(1)}s`;
+      }
+      
+      if (data.status === 'success' || data.status === 'failed') {
+        clearInterval(pollInterval);
+        const btn = document.getElementById('run-btn');
+        btn.disabled = false;
+        btn.textContent = '▶ Run Full Pipeline';
+        
+        if (data.status === 'failed' && data.error_msg) {
+          alert('Pipeline failed: ' + data.error_msg.substring(0, 200));
+        } else if (data.status === 'success') {
+          setTimeout(() => location.reload(), 1500);
+        }
+      }
+    } catch (e) {
+      console.error('Poll error:', e);
+    }
+  }, 2000);
+}
+
+function updateStatusUI(status, completed, total, errorMsg) {
+  const icon = document.getElementById('status-icon');
+  const text = document.getElementById('status-text');
+  const fill = document.getElementById('progress-fill');
+  const progressText = document.getElementById('progress-text');
+  
+  const pct = total > 0 ? (completed / total * 100) : 0;
+  fill.style.width = pct + '%';
+  progressText.textContent = `${completed} / ${total} steps`;
+  
+  if (status === 'running') {
+    icon.textContent = '⏳';
+    text.textContent = 'Pipeline running...';
+    text.style.color = 'var(--blue)';
+  } else if (status === 'success') {
+    icon.textContent = '✓';
+    text.textContent = 'Pipeline completed successfully!';
+    text.style.color = 'var(--green)';
+    fill.style.background = 'var(--green)';
+  } else if (status === 'failed') {
+    icon.textContent = '✗';
+    text.textContent = 'Pipeline failed: ' + (errorMsg || 'Unknown error');
+    text.style.color = 'var(--red)';
+  } else {
+    icon.textContent = '○';
+    text.textContent = 'Pending...';
+    text.style.color = 'var(--text3)';
+  }
+}
+</script>
+{% endblock %}

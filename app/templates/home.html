@@ -74,6 +74,30 @@
           </div>
           {% endif %}
 
+          <!-- Poll -->
+          {% if post.poll %}
+          <div class="poll-container" style="background:var(--bg3);padding:14px;border-radius:12px;margin-top:12px;border:1px solid var(--border);">
+            <div class="poll-question" style="font-family:var(--font-h);font-size:14px;margin-bottom:12px;">{{ post.poll.question }}</div>
+            {% set total_votes = namespace(val=0) %}
+            {% for opt in post.poll.options %}{% set total_votes.val = total_votes.val + opt.votes|length %}{% endfor %}
+            {% for opt in post.poll.options %}
+              {% set opt_vote_count = opt.votes|length %}
+              {% set pct = ((opt_vote_count / total_votes.val * 100) if total_votes.val > 0 else 0)|round|int %}
+              {% set has_voted = user and (opt.votes|selectattr("user_id", "equalto", user.id)|list|length > 0) %}
+              <div class="poll-option {% if has_voted %}voted{% endif %}"
+                   {% if not has_voted %}onclick="votePoll({{ post.id }},{{ opt.id }})"{% endif %}
+                   style="position:relative;margin-bottom:8px;padding:8px 12px;cursor:{% if has_voted %}default{% else %}pointer{% endif %};background:var(--bg2);border-radius:8px;border:1px solid {% if has_voted %}var(--red){% else %}transparent{% endif %};overflow:hidden;">
+                <div class="poll-fill" style="position:absolute;left:0;top:0;height:100%;width:{{ pct if has_voted else 0 }}%;background:rgba(255,100,100,0.15);z-index:0;transition:width 0.4s ease;"></div>
+                <div style="position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+                  <span>{{ opt.text }}</span>
+                  {% if has_voted %}<span class="poll-pct" style="font-size:11px;color:var(--text2);">{{ pct }}%</span>{% endif %}
+                </div>
+              </div>
+            {% endfor %}
+            <div style="font-size:11px;color:var(--text3);margin-top:8px;font-family:var(--font-m);">{{ total_votes.val }} votes</div>
+          </div>
+          {% endif %}
+
           <!-- Reactions -->
           {% if post.reactions %}
           <div class="reactions-bar">
@@ -147,11 +171,11 @@
       </div>
     </div>
 
-    {% if trending_zones %}
+    {% if zone_suggestions %}
     <div class="sw">
-      <div class="sw-head">🏘️ Trending Zones</div>
+      <div class="sw-head">🏘️ Suggested for You</div>
       <div class="sw-body">
-        {% for zone in trending_zones %}
+        {% for zone in zone_suggestions %}
         <div class="follow-row">
           <a href="/zones/{{ zone.slug }}" style="display:flex;align-items:center;gap:8px;flex:1;">
             <div style="width:28px;height:28px;border-radius:6px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;">
@@ -204,11 +228,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-async function likePost(id,btn){const r=await fetch(`/posts/${id}/like`,{method:'POST'});const d=await r.json();document.getElementById('lc-'+id).textContent=d.count;btn.classList.toggle('up',d.liked);}
-async function followUser(u,btn){const r=await fetch(`/users/${u}/follow`,{method:'POST'});const d=await r.json();btn.textContent=d.following?'Following':'Follow';btn.classList.toggle('on',d.following);}
-function filterCat(btn,cat){document.querySelectorAll('.cat-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.querySelectorAll('.post').forEach(p=>{p.style.display=(cat==='all'||p.dataset.cat===cat)?'flex':'none';});}
-async function reactPost(id,type){const r=await fetch(`/posts/${id}/react/${type}`,{method:'POST'});const d=await r.json();location.reload();}
-async function bookmarkPost(id,btn){const r=await fetch(`/posts/${id}/bookmark`,{method:'POST'});const d=await r.json();btn.style.opacity=d.bookmarked?'1':'0.4';}
+<script type="module">
+  import { initFeed } from '/static/js/feed.js';
+  initFeed();
 </script>
 {% endblock %}

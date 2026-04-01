@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Discover — Strange Street{% endblock %}
 {% block content %}
+<script type="module">
+  import { initFeed } from '/static/js/feed.js';
+  initFeed();
+</script>
 <div style="max-width:960px;margin:0 auto;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;">
     <div>

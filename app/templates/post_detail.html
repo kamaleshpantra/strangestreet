@@ -100,24 +100,48 @@
       <input name="content" type="text" class="inp" placeholder="Add a comment..." required style="flex:1;"/>
       <button type="submit" class="btn-primary">Comment</button>
     </form>
-    {% for c in post.comments %}
-    <div class="comment">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-        <a href="/users/{{ c.author.username }}" style="display:flex;align-items:center;gap:6px;">
-          {% if c.author.avatar_url %}
-            <img src="{{ c.author.avatar_url }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt=""/>
-          {% else %}
-            <div class="av" style="width:24px;height:24px;font-size:9px;">{{ c.author.display_name[0] }}</div>
+    <!-- Recursive Comment Macro -->
+    {% macro render_comments(comments_list, depth=0) %}
+      {% for c in comments_list %}
+        <div class="comment" style="margin-left:{% if depth>0 %}16{% else %}0{% endif %}px; border-left:{% if depth>0 %}2px solid var(--border){% else %}none{% endif %}; padding-left:{% if depth>0 %}12{% else %}0{% endif %}px; margin-top:12px;">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+            <a href="/users/{{ c.author.username }}" style="display:flex;align-items:center;gap:6px;">
+              {% if c.author.avatar_url %}
+                <img src="{{ c.author.avatar_url }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt=""/>
+              {% else %}
+                <div class="av" style="width:24px;height:24px;font-size:9px;">{{ c.author.display_name[0] }}</div>
+              {% endif %}
+              <strong style="font-size:13px;font-weight:500;">{{ c.author.display_name }}</strong>
+            </a>
+            <span class="post-time">{{ c.created_at.strftime('%b %d, %I:%M %p') if c.created_at else '' }}</span>
+          </div>
+          <div style="font-size:14px;color:var(--text2);line-height:1.6;padding-left:30px;">
+            {{ c.content }}
+            <!-- Reply Action -->
+            <div style="margin-top:6px;">
+              <button class="btn-ghost" style="font-size:11px;padding:2px 6px;" onclick="toggleReplyForm({{ c.id }})">↩ Reply</button>
+            </div>
+            <!-- Reply Form (Hidden) -->
+            <form id="reply-form-{{ c.id }}" action="/posts/{{ post.id }}/comment" method="post" style="display:none;margin-top:8px;align-items:center;gap:8px;">
+              <input type="hidden" name="parent_id" value="{{ c.id }}">
+              <input name="content" type="text" class="inp" placeholder="Reply to {{ c.author.display_name }}..." required style="flex:1;font-size:12px;padding:8px;"/>
+              <button type="submit" class="btn-primary" style="padding:8px 12px;font-size:12px;">Post</button>
+            </form>
+          </div>
+          
+          <!-- Render Child Replies recursively -->
+          {% if c.replies %}
+            {{ render_comments(c.replies, depth + 1) }}
           {% endif %}
-          <strong style="font-size:13px;font-weight:500;">{{ c.author.display_name }}</strong>
-        </a>
-        <span class="post-time">{{ c.created_at.strftime('%b %d, %I:%M %p') if c.created_at else '' }}</span>
-      </div>
-      <div style="font-size:14px;color:var(--text2);line-height:1.6;padding-left:30px;">{{ c.content }}</div>
-    </div>
-    {% endfor %}
-    {% if not post.comments %}
-    <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">No comments yet. Be the first!</div>
+        </div>
+      {% endfor %}
+    {% endmacro %}
+
+    {% set top_level_comments = post.comments | selectattr('parent_id', 'none') | list %}
+    {% if top_level_comments %}
+      {{ render_comments(top_level_comments) }}
+    {% else %}
+      <div style="text-align:center;padding:20px;color:var(--text3);font-size:13px;">No comments yet. Be the first!</div>
     {% endif %}
   </div>
 </div>
@@ -125,6 +149,11 @@
 
 {% block scripts %}
 <script>
+function toggleReplyForm(id) {
+  const f = document.getElementById('reply-form-'+id);
+  f.style.display = f.style.display === 'none' ? 'flex' : 'none';
+  if(f.style.display === 'flex') f.querySelector('input[name="content"]').focus();
+}
 async function likePost(id,btn){const r=await fetch(`/posts/${id}/like`,{method:'POST'});const d=await r.json();document.getElementById('lc').textContent=d.count;btn.classList.toggle('up',d.liked);}
 async function reactPost(id,type){const r=await fetch(`/posts/${id}/react/${type}`,{method:'POST'});location.reload();}
 async function bookmarkPost(id,btn){const r=await fetch(`/posts/${id}/bookmark`,{method:'POST'});const d=await r.json();btn.style.opacity=d.bookmarked?'1':'0.4';}

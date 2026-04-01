@@ -1,0 +1,24 @@
+﻿python : INFO:     Started server 
+process [27612]
+At line:1 char:1
++ python -m uvicorn main:app --port 
+8000 > server_log.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecif 
+   ied: (INFO:     Started server proc  
+  ess [27612]:String) [], RemoteExcep   
+ tion
+    + FullyQualifiedErrorId : NativeCom 
+   mandError
+ 
+INFO:     Waiting for application 
+startup.
+INFO:     ASGI 'lifespan' protocol 
+appears unsupported.
+INFO:     Application startup complete.
+ERROR:    [Errno 10048] error while 
+attempting to bind on address 
+('127.0.0.1', 8000): only one usage of 
+each socket address (protocol/network 
+address/port) is normally permitted

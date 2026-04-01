@@ -1,0 +1,34 @@
+﻿
+============================================================
+ STRANGE STREET ML INTELLIGENCE PIPELINE RESULTS
+============================================================
+
+[1] Top 3 Influencers (Graph Engine - PageRank)
+    These users are the most central in the follower graph.
+  - @burnscasey: PageRank=1.00000, Connections=25
+  - @ablackburn: PageRank=0.94172, Connections=23
+  - @yjensen: PageRank=0.90544, Connections=19
+
+[2] Top Stranger Recommendations for @rosalesjacqueli
+    Blends friend-of-friend topology + interest embeddings
+
+[3] Smart Feed Highlights for @rosalesjacqueli
+    Collaborative Filtering + Temporal Decay + Content Similarity
+  - Post by @bryan00 | Fit Score: 0.6239
+    "The situation with space exploration is more complicated than the head..."
+  - Post by @jenna09 | Fit Score: 0.5736
+    "Controversial opinion: pasta carbonara is overrated and shakshuka dese..."
+  - Post by @ndickerson | Fit Score: 0.5512
+    "The way that producer builds tension in their compositions is genuinel..."
+
+[4] Content Safety Layer (Toxicity Diagnostics)
+    Posts penalized or flagged by heuristic NLP models.
+  - No highly toxic content detected in sample set.
+
+[5] Behavioral Embeddings (Top Engaged Users)
+  - @frankmartinez: Engagement Rate=1.00, Activity Level/Mo=0.27
+  - @andersonjamie: Engagement Rate=1.00, Activity Level/Mo=0.40
+  - @jacksondavid: Engagement Rate=1.00, Activity Level/Mo=0.27
+
+============================================================
+

@@ -14,15 +14,15 @@ from sqlalchemy import Table
 followers = Table(
     "followers",
     Base.metadata,
-    Column("follower_id", Integer, ForeignKey("users.id"), primary_key=True),
-    Column("followed_id", Integer, ForeignKey("users.id"), primary_key=True),
+    Column("follower_id", Integer, ForeignKey("users.id"), primary_key=True, index=True),
+    Column("followed_id", Integer, ForeignKey("users.id"), primary_key=True, index=True),
 )
 
 post_likes = Table(
     "post_likes",
     Base.metadata,
-    Column("user_id",  Integer, ForeignKey("users.id"),  primary_key=True),
-    Column("post_id",  Integer, ForeignKey("posts.id"),  primary_key=True),
+    Column("user_id",  Integer, ForeignKey("users.id"),  primary_key=True, index=True),
+    Column("post_id",  Integer, ForeignKey("posts.id"),  primary_key=True, index=True),
 )
 
 user_interests = Table(
@@ -67,6 +67,7 @@ class User(Base):
     alias_relationship_status = Column(String(30), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    public_key = Column(Text, nullable=True)
 
     # Relationships
     posts    = relationship("Post",    back_populates="author",  cascade="all, delete")
@@ -121,6 +122,7 @@ class Post(Base):
     is_flagged  = Column(Boolean, default=False)
     flag_reason = Column(String(100), nullable=True)
     is_pinned   = Column(Boolean, default=False)
+    flair_id    = Column(Integer, ForeignKey("zone_flairs.id", ondelete="SET NULL"), nullable=True)
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
@@ -131,6 +133,7 @@ class Post(Base):
     bookmarks = relationship("Bookmark", back_populates="post", cascade="all, delete")
     zone      = relationship("Zone",    back_populates="posts")
     poll      = relationship("Poll",    back_populates="post",  uselist=False, cascade="all, delete")
+    flair     = relationship("ZoneFlair")
 
 
 # ── Comment ───────────────────────────────────────────────────────────────────
@@ -139,12 +142,16 @@ class Comment(Base):
 
     id         = Column(Integer, primary_key=True, index=True)
     content    = Column(Text,    nullable=False)
-    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False)
-    post_id    = Column(Integer, ForeignKey("posts.id"), nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    post_id    = Column(Integer, ForeignKey("posts.id"), nullable=False, index=True)
+    parent_id  = Column(Integer, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
 
     author = relationship("User", back_populates="comments")
     post   = relationship("Post", back_populates="comments")
+    
+    replies = relationship("Comment", back_populates="parent", cascade="all, delete", foreign_keys=[parent_id])
+    parent  = relationship("Comment", back_populates="replies", remote_side=[id], foreign_keys=[parent_id])
 
 
 # ── Interaction log (for ML training) ────────────────────────────────────────
@@ -175,9 +182,9 @@ class Connection(Base):
     __tablename__ = "connections"
 
     id            = Column(Integer, primary_key=True, index=True)
-    requester_id  = Column(Integer, ForeignKey("users.id"), nullable=False)
-    requested_id  = Column(Integer, ForeignKey("users.id"), nullable=False)
-    status        = Column(String(20), default="pending", nullable=False)  # pending, accepted, rejected, blocked
+    requester_id  = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    requested_id  = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    status        = Column(String(20), default="pending", nullable=False, index=True)  # pending, accepted, rejected, blocked
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
     updated_at    = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -196,6 +203,9 @@ class Message(Base):
     receiver_id   = Column(Integer, ForeignKey("users.id"), nullable=False)
     connection_id = Column(Integer, ForeignKey("connections.id"), nullable=True)  # null = public DM
     content       = Column(Text, nullable=False)
+    media_url     = Column(String(500), nullable=True)
+    media_type    = Column(String(20), nullable=True)  # 'image', 'video', 'file'
+    file_name     = Column(String(200), nullable=True) # for downloads
     is_read       = Column(Boolean, default=False)
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -251,6 +261,31 @@ class ZoneMembership(Base):
 
     user = relationship("User",  back_populates="zone_memberships")
     zone = relationship("Zone",  back_populates="memberships")
+
+
+# ── Zone Flair ───────────────────────────────────────────────────────────────
+class ZoneFlair(Base):
+    __tablename__ = "zone_flairs"
+
+    id        = Column(Integer, primary_key=True, index=True)
+    zone_id   = Column(Integer, ForeignKey("zones.id", ondelete="CASCADE"), nullable=False)
+    name      = Column(String(50), nullable=False)
+    color_hex = Column(String(7), default="#4B5563")
+
+    zone = relationship("Zone")
+
+# ── Zone Ban ─────────────────────────────────────────────────────────────────
+class ZoneBan(Base):
+    __tablename__ = "zone_bans"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    zone_id    = Column(Integer, ForeignKey("zones.id", ondelete="CASCADE"), nullable=False)
+    user_id    = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    reason     = Column(String(200), nullable=True)
+    banned_at  = Column(DateTime(timezone=True), server_default=func.now())
+
+    zone = relationship("Zone")
+    user = relationship("User")
 
 
 # ── Story ────────────────────────────────────────────────────────────────────
@@ -362,3 +397,93 @@ class PollVote(Base):
 
     option = relationship("PollOption", back_populates="votes")
     user   = relationship("User")
+
+
+# ── ML Feature Store ─────────────────────────────────────────────────────────
+class UserFeature(Base):
+    """Cached user-level ML features (recomputed by pipeline)."""
+    __tablename__ = "user_features"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    user_id         = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+    pagerank        = Column(Float, default=0.0)
+    community_id    = Column(Integer, nullable=True)
+    graph_degree    = Column(Integer, default=0)
+    topic_vector    = Column(JSON, nullable=True)       # NMF topic distribution
+    interest_embedding = Column(JSON, nullable=True)    # reduced interest vector
+    engagement_rate = Column(Float, default=0.0)
+    activity_level  = Column(Float, default=0.0)
+    updated_at      = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User")
+
+
+class PostFeature(Base):
+    """Cached post-level ML features."""
+    __tablename__ = "post_features"
+
+    id             = Column(Integer, primary_key=True, index=True)
+    post_id        = Column(Integer, ForeignKey("posts.id"), unique=True, nullable=False)
+    topic_vector   = Column(JSON, nullable=True)
+    tfidf_norm     = Column(Float, default=0.0)
+    toxicity_score = Column(Float, default=0.0)
+    updated_at     = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    post = relationship("Post")
+
+
+class PeopleScore(Base):
+    """ML-scored stranger recommendations per user."""
+    __tablename__ = "people_scores"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False)
+    target_id  = Column(Integer, ForeignKey("users.id"), nullable=False)
+    score      = Column(Float, default=0.0)
+    breakdown  = Column(JSON, nullable=True)   # {"jaccard": 0.3, "fof": 0.2, ...}
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user   = relationship("User", foreign_keys=[user_id])
+    target = relationship("User", foreign_keys=[target_id])
+
+
+class ZoneScore(Base):
+    """ML-scored zone recommendations per user."""
+    __tablename__ = "zone_scores"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False)
+    zone_id    = Column(Integer, ForeignKey("zones.id"), nullable=False)
+    score      = Column(Float, default=0.0)
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User")
+    zone = relationship("Zone")
+
+
+class ContentFlag(Base):
+    """Safety flagging log from ML pipeline."""
+    __tablename__ = "content_flags"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    post_id    = Column(Integer, ForeignKey("posts.id"), nullable=False)
+    flag_type  = Column(String(30), nullable=False)   # toxicity, spam, bot
+    confidence = Column(Float, default=0.0)
+    flagged_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    post = relationship("Post")
+
+
+class PipelineRun(Base):
+    """ML pipeline execution history."""
+    __tablename__ = "pipeline_runs"
+
+    id           = Column(Integer, primary_key=True, index=True)
+    status       = Column(String(20), default="pending")   # pending, running, success, failed
+    steps_completed = Column(Integer, default=0)
+    total_steps  = Column(Integer, default=7)
+    duration_sec = Column(Float, nullable=True)
+    error_msg    = Column(Text, nullable=True)
+    triggered_by = Column(String(50), nullable=True)  # 'manual', 'scheduler', 'api'
+    started_at   = Column(DateTime(timezone=True), server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request, Form, HTTPException
+from fastapi import APIRouter, Depends, Request, Form, HTTPException, UploadFile, File
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
@@ -6,9 +6,18 @@ from sqlalchemy import and_, or_, desc
 from database import get_db
 from app.models import User, Message, Connection, Reveal, Notification
 from app.auth import require_login
+import shutil, os, uuid
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 templates = Jinja2Templates(directory="app/templates")
+
+MSG_UPLOAD_DIR = "app/static/uploads/messages"
+ALLOWED_EXT = {
+    ".jpg",".jpeg",".png",".gif",".webp",".avif",".bmp",".svg",
+    ".mp4",".webm",".mov",".pdf",".doc",".docx",".zip",".txt"
+}
+VIDEO_EXT = {".mp4",".webm",".mov"}
+IMAGE_EXT = {".jpg",".jpeg",".png",".gif",".webp",".avif",".bmp"}
 
 
 @router.get("", response_class=HTMLResponse)
@@ -124,10 +133,40 @@ def alias_chat(connection_id: int, request: Request, db: Session = Depends(get_d
     })
 
 
+def handle_msg_upload(media: UploadFile):
+    if not media or not media.filename:
+        return None, None, None
+        
+    ext = os.path.splitext(media.filename)[1].lower()
+    if ext not in ALLOWED_EXT:
+        ext = ".bin"
+        
+    is_video = ext in VIDEO_EXT
+    is_image = ext in IMAGE_EXT
+    
+    media_type = "video" if is_video else ("image" if is_image else "file")
+    os.makedirs(MSG_UPLOAD_DIR, exist_ok=True)
+    
+    if is_image:
+        from app.utils import compress_image
+        fname = compress_image(media, MSG_UPLOAD_DIR, prefix="msg_", max_size=(1600,1600))
+        if not fname: # fallback
+            fname = f"msg_{uuid.uuid4().hex}{ext}"
+            with open(os.path.join(MSG_UPLOAD_DIR, fname), "wb") as f:
+                shutil.copyfileobj(media.file, f)
+    else:
+        fname = f"msg_{uuid.uuid4().hex}{ext}"
+        with open(os.path.join(MSG_UPLOAD_DIR, fname), "wb") as f:
+            shutil.copyfileobj(media.file, f)
+            
+    return f"/static/uploads/messages/{fname}", media_type, media.filename
+
+
 @router.post("/c/{connection_id}/send")
 def send_alias_message(
     connection_id: int, request: Request,
-    content: str = Form(...),
+    content: str = Form(""),
+    media: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     user = require_login(request, db)
@@ -142,10 +181,16 @@ def send_alias_message(
         raise HTTPException(status_code=404)
 
     other_id = conn.requested_id if conn.requester_id == user.id else conn.requester_id
+    
+    media_url, media_type, file_name = handle_msg_upload(media)
+    final_content = content.strip() or ("📎 Attachment" if media_url else "")
+    if not final_content and not media_url:
+        return RedirectResponse(f"/messages/c/{connection_id}", status_code=302)
 
     msg = Message(
         sender_id=user.id, receiver_id=other_id,
-        connection_id=connection_id, content=content.strip(),
+        connection_id=connection_id, content=final_content,
+        media_url=media_url, media_type=media_type, file_name=file_name
     )
     db.add(msg)
 
@@ -196,7 +241,8 @@ def public_chat(username: str, request: Request, db: Session = Depends(get_db)):
 @router.post("/public/{username}/send")
 def send_public_message(
     username: str, request: Request,
-    content: str = Form(...),
+    content: str = Form(""),
+    media: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
     user = require_login(request, db)
@@ -204,10 +250,16 @@ def send_public_message(
     other = db.query(User).filter(User.username == username).first()
     if not other or other.id == user.id:
         raise HTTPException(status_code=404)
+        
+    media_url, media_type, file_name = handle_msg_upload(media)
+    final_content = content.strip() or ("📎 Attachment" if media_url else "")
+    if not final_content and not media_url:
+        return RedirectResponse(f"/messages/public/{username}", status_code=302)
 
     msg = Message(
         sender_id=user.id, receiver_id=other.id,
-        connection_id=None, content=content.strip(),
+        connection_id=None, content=final_content,
+        media_url=media_url, media_type=media_type, file_name=file_name
     )
     db.add(msg)
 
@@ -219,3 +271,16 @@ def send_public_message(
     db.commit()
 
     return RedirectResponse(f"/messages/public/{username}", status_code=302)
+
+
+@router.post("/{msg_id}/delete")
+def delete_message(msg_id: int, request: Request, db: Session = Depends(get_db)):
+    user = require_login(request, db)
+    
+    msg = db.query(Message).filter(Message.id == msg_id, Message.sender_id == user.id).first()
+    if not msg:
+        raise HTTPException(status_code=404, detail="Message not found or you don't have permission")
+        
+    db.delete(msg)
+    db.commit()
+    return JSONResponse({"success": True})

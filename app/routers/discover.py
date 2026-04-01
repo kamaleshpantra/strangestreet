@@ -34,6 +34,56 @@ def discover_page(
             "no_interests": True,
         })
 
+    # ── Try ML-scored recommendations first ───────────────────────────
+    from app.models import PeopleScore
+    ml_scores = db.query(PeopleScore).filter(
+        PeopleScore.user_id == user.id
+    ).order_by(PeopleScore.score.desc()).limit(50).all()
+
+    if ml_scores:
+        target_ids = [s.target_id for s in ml_scores]
+        score_map = {s.target_id: s for s in ml_scores}
+
+        # Filter by category if provided
+        if category:
+            cat_interest_ids = {
+                i.id for i in db.query(Interest).filter(Interest.category == category).all()
+            }
+            filtered_ids = []
+            for tid in target_ids:
+                t_user = db.query(User).filter(User.id == tid).first()
+                if t_user and any(i.id in cat_interest_ids for i in t_user.interests):
+                    filtered_ids.append(tid)
+            target_ids = filtered_ids
+
+        targets = db.query(User).filter(
+            User.id.in_(target_ids),
+            User.is_active == True,
+        ).all()
+        target_by_id = {u.id: u for u in targets}
+
+        profiles = []
+        for tid in target_ids:
+            u = target_by_id.get(tid)
+            if not u:
+                continue
+            shared_interests = [i for i in u.interests if i.id in my_interest_ids]
+            ps = score_map.get(tid)
+            profiles.append({
+                "user": u,
+                "shared_count": len(shared_interests),
+                "shared_interests": shared_interests[:8],
+                "total_interests": len(u.interests),
+                "ml_score": round(ps.score, 2) if ps else 0,
+            })
+
+        return templates.TemplateResponse("discover.html", {
+            "request": request, "user": user, "profiles": profiles,
+            "categories": categories, "selected_category": category,
+            "no_interests": False,
+        })
+
+    # ── Fallback: SQL interest counting (original logic) ──────────────
     # Find users who share at least one interest, excluding self and already-connected
     connected_ids = set()
     for c in user.sent_connections:
