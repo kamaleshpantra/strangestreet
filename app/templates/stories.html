@@ -20,7 +20,7 @@
       {% if target.avatar_url %}
         <img src="{{ target.avatar_url }}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3);" alt=""/>
       {% else %}
-        <div class="av" style="width:32px;height:32px;font-size:12px;border:2px solid rgba(255,255,255,0.3);">{{ target.display_name[0] }}</div>
+        <div class="av" style="width:32px;height:32px;font-size:12px;border:2px solid rgba(255,255,255,0.3);">{{ target.display_name[:1] }}</div>
       {% endif %}
       <div style="flex:1;">
         <div style="font-size:13px;font-weight:600;color:#fff;">{{ target.display_name }}</div>

@@ -1,13 +1,3 @@
----
-title: Strange Street
-emoji: 🏙️
-colorFrom: red
-colorTo: gray
-sdk: docker
-app_port: 7860
-pinned: false
----
-
 # Strange Street
 
 A production-ready social networking platform built with FastAPI, PostgreSQL, and Machine Learning.
@@ -19,6 +9,13 @@ A production-ready social networking platform built with FastAPI, PostgreSQL, an
 - **Observability**: Structured JSON logging.
 
 ## Infrastructure
-- **Hugging Face Spaces**: 16GB RAM CPU-Basic (Docker SDK).
-- **Database**: Neon (Serverless Postgres).
+- **Hosting**: Render (Web Service + Cron Job).
+- **Database**: PostgreSQL (Render managed or Neon Serverless).
 - **Media**: Cloudinary.
+
+## Deployment
+Push to your connected Git repo — Render auto-deploys via `render.yaml`.
+
+```bash
+git push origin main
+```

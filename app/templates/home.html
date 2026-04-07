@@ -12,7 +12,7 @@
         {% if user.avatar_url %}
           <img src="{{ user.avatar_url }}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt=""/>
         {% else %}
-          <div class="av" style="width:36px;height:36px;font-size:14px;">{{ user.display_name[0] }}</div>
+          <div class="av" style="width:36px;height:36px;font-size:14px;">{{ user.display_name[:1] }}</div>
         {% endif %}
         <div class="compose-inp">What's strange today, {{ user.display_name }}?</div>
         <button class="btn-primary" style="flex-shrink:0;">+ Post</button>
@@ -48,7 +48,7 @@
               {% if post.author.avatar_url %}
                 <img src="{{ post.author.avatar_url }}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" alt=""/>
               {% else %}
-                <div class="av" style="width:20px;height:20px;font-size:8px;">{{ post.author.display_name[0] }}</div>
+                <div class="av" style="width:20px;height:20px;font-size:8px;">{{ post.author.display_name[:1] }}</div>
               {% endif %}
               <strong>{{ post.author.display_name }}</strong>
               <span style="color:var(--text3);">·</span>
@@ -130,10 +130,9 @@
             </div>
             <button class="act-btn" onclick="bookmarkPost({{ post.id }},this)" style="margin-left:auto;">🔖</button>
             {% if user and post.author.id == user.id %}
-            <form action="/posts/{{ post.id }}/delete" method="post" style="display:inline;">
-              <button type="submit" class="act-btn" onclick="return confirm('Delete?')">🗑️</button>
-            </form>
+              <button class="act-btn" onclick="deletePost({{ post.id }})" title="Delete Post">🗑️</button>
             {% endif %}
+
           </div>
         </div>
       </div>
@@ -156,7 +155,7 @@
           {% if user.avatar_url %}
             <img src="{{ user.avatar_url }}" style="width:42px;height:42px;border-radius:50%;object-fit:cover;border:1px solid var(--red-dim);" alt=""/>
           {% else %}
-            <div class="av" style="width:42px;height:42px;font-size:17px;">{{ user.display_name[0] }}</div>
+            <div class="av" style="width:42px;height:42px;font-size:17px;">{{ user.display_name[:1] }}</div>
           {% endif %}
           <div>
             <div style="font-family:var(--font-h);font-size:14px;font-weight:600;">{{ user.display_name }}</div>
@@ -203,7 +202,7 @@
             {% if u.avatar_url %}
               <img src="{{ u.avatar_url }}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt=""/>
             {% else %}
-              <div class="av" style="width:32px;height:32px;font-size:12px;flex-shrink:0;">{{ u.display_name[0] }}</div>
+              <div class="av" style="width:32px;height:32px;font-size:12px;flex-shrink:0;">{{ u.display_name[:1] }}</div>
             {% endif %}
             <div style="min-width:0;">
               <div style="font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ u.display_name }}</div>

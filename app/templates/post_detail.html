@@ -15,7 +15,7 @@
           {% if post.author.avatar_url %}
             <img src="{{ post.author.avatar_url }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt=""/>
           {% else %}
-            <div class="av" style="width:24px;height:24px;font-size:9px;">{{ post.author.display_name[0] }}</div>
+            <div class="av" style="width:24px;height:24px;font-size:9px;">{{ post.author.display_name[:1] }}</div>
           {% endif %}
           <strong>{{ post.author.display_name }}</strong>
           {% if post.author.is_verified %}<span class="verified">✓</span>{% endif %}
@@ -109,7 +109,7 @@
               {% if c.author.avatar_url %}
                 <img src="{{ c.author.avatar_url }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt=""/>
               {% else %}
-                <div class="av" style="width:24px;height:24px;font-size:9px;">{{ c.author.display_name[0] }}</div>
+                <div class="av" style="width:24px;height:24px;font-size:9px;">{{ c.author.display_name[:1] }}</div>
               {% endif %}
               <strong style="font-size:13px;font-weight:500;">{{ c.author.display_name }}</strong>
             </a>
@@ -158,5 +158,11 @@ async function likePost(id,btn){const r=await fetch(`/posts/${id}/like`,{method:
 async function reactPost(id,type){const r=await fetch(`/posts/${id}/react/${type}`,{method:'POST'});location.reload();}
 async function bookmarkPost(id,btn){const r=await fetch(`/posts/${id}/bookmark`,{method:'POST'});const d=await r.json();btn.style.opacity=d.bookmarked?'1':'0.4';}
 async function votePoll(postId,optId){const r=await fetch(`/posts/${postId}/poll/${optId}/vote`,{method:'POST'});location.reload();}
+async function deletePost(id) {
+  if (!confirm('Are you sure?')) return;
+  const r = await fetch(`/posts/${id}/delete`, {method:'POST'});
+  if (r.ok) window.location.href = '/';
+  else alert('Delete failed');
+}
 </script>
 {% endblock %}

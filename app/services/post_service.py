@@ -90,57 +90,52 @@ class PostService:
     @staticmethod
     def delete_post(db: Session, post_id: int, user_id: int) -> bool:
         post = db.query(Post).filter(Post.id == post_id).first()
-        if not post or post.user_id != user_id:
+        if not post:
             return False
+        if post.user_id != user_id:
+            # Check if user is admin (optional, for safety)
+            from app.models import User
+            user = db.query(User).filter(User.id == user_id).first()
+            if not user or not (getattr(user, 'is_admin', False)):
+                return False
 
         # Clean up media file
-        if post.image_url:
-            if post.image_url.startswith("/static/uploads/posts/"):
-                # Local file
-                fpath = os.path.join("app", post.image_url.lstrip("/"))
-                if os.path.exists(fpath):
-                    os.remove(fpath)
-            elif "res.cloudinary.com" in post.image_url:
-                # Cloudinary file
-                from app.services.cloudinary_service import CloudinaryService
-                public_id = CloudinaryService.get_public_id(post.image_url)
-                if public_id:
-                    CloudinaryService.delete_image(public_id)
+        try:
+            if post.image_url:
+                if post.image_url.startswith("/static/uploads/posts/"):
+                    # Local file
+                    fpath = os.path.join("app", post.image_url.lstrip("/"))
+                    if os.path.exists(fpath):
+                        os.remove(fpath)
+                elif "res.cloudinary.com" in post.image_url:
+                    # Cloudinary file
+                    from app.services.cloudinary_service import CloudinaryService
+                    public_id = CloudinaryService.get_public_id(post.image_url)
+                    if public_id:
+                        CloudinaryService.delete_image(public_id)
+        except Exception as e:
+            print(f"[PostService] Error cleaning up media: {e}")
 
-        # Clean up non-cascaded dependencies (manual pre-delete to avoid FK constraint errors)
-        from app.models import FeedScore, Comment, Reaction, Bookmark, Poll, PollOption, PollVote
+        # Clean up non-cascaded dependencies
+        from app.models import InteractionLog, FeedScore, PostFeature, ContentFlag, Notification
         
-        db.query(InteractionLog).filter(InteractionLog.post_id == post_id).delete()
-        db.query(FeedScore).filter(FeedScore.post_id == post_id).delete()
-        db.query(PostFeature).filter(PostFeature.post_id == post_id).delete()
-        db.query(ContentFlag).filter(ContentFlag.post_id == post_id).delete()
-        
-        # Clear Notifications linked to this post
-        db.query(Notification).filter(
-            Notification.reference_id == post_id,
-            Notification.reference_type == "post",
-        ).delete()
-        
-        # Clear Likes (Association Table)
-        db.execute(post_likes.delete().where(post_likes.c.post_id == post_id))
-        
-        # Clear Bookmarks and Reactions
-        db.query(Bookmark).filter(Bookmark.post_id == post_id).delete()
-        db.query(Reaction).filter(Reaction.post_id == post_id).delete()
-        
-        # Clear Polls and their options/votes
-        poll = db.query(Poll).filter(Poll.post_id == post_id).first()
-        if poll:
-            # Delete votes and options first
-            db.query(PollVote).join(PollOption).filter(PollOption.poll_id == poll.id).delete()
-            db.query(PollOption).filter(PollOption.poll_id == poll.id).delete()
-            db.delete(poll)
-        
-        # Clear Comments (and their nested replies)
-        # Note: cascading replies via parent_id should be handled by SQLAlchemy delete(post), 
-        # but manual delete is more robust for session-level issues.
-        db.query(Comment).filter(Comment.post_id == post_id).delete()
+        try:
+            db.query(InteractionLog).filter(InteractionLog.post_id == post_id).delete()
+            db.query(FeedScore).filter(FeedScore.post_id == post_id).delete()
+            db.query(PostFeature).filter(PostFeature.post_id == post_id).delete()
+            db.query(ContentFlag).filter(ContentFlag.post_id == post_id).delete()
+            
+            # Clear Notifications linked to this post
+            db.query(Notification).filter(
+                Notification.reference_id == post_id,
+                Notification.reference_type == "post",
+            ).delete()
+            
+            db.delete(post)
+            db.commit()
+            return True
+        except Exception as e:
+            db.rollback()
+            print(f"[PostService] Error deleting post {post_id}: {e}")
+            return False
 
-        db.delete(post)
-        db.commit()
-        return True

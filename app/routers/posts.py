@@ -270,7 +270,8 @@ def delete_post(post_id: int, request: Request, db: Session = Depends(get_db)):
     from app.services.post_service import PostService
     success = PostService.delete_post(db, post_id, user.id)
     if not success:
-        raise HTTPException(status_code=403)
+        return JSONResponse({"error": "Failed to delete post"}, status_code=403)
         
-    return RedirectResponse("/", status_code=302)
+    return JSONResponse({"success": True})
+
 

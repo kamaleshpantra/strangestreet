@@ -1,16 +1,19 @@
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse, PlainTextResponse
+import traceback
+from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
-from database import engine, Base
+from database import engine, Base, SessionLocal
 from config import settings
 import os
 
 # Import all models so SQLAlchemy creates tables
 import app.models  # noqa
 
-from app.routers import auth, posts, users, feed, discover, connections, messages, zones, stories, notifications, admin, search
+from app.routers import auth, posts, users, feed, discover, connections, messages, zones, stories, notifications, admin, search, economy
 
 
 from app.logging_config import logger
@@ -29,6 +32,16 @@ async def lifespan(app: FastAPI):
     # Seed interests
     from app.seed_interests import seed_interests
     seed_interests()
+
+    # Initialize Bloom Filters
+    from app.services.bloom_service import bloom_service
+    db = SessionLocal()
+    try:
+        bloom_service.init_filters(db)
+    except Exception as e:
+        logger.error(f"Failed to init bloom filters: {e}")
+    finally:
+        db.close()
 
     # Start ML pipeline scheduler
     try:
@@ -61,8 +74,15 @@ app.include_router(stories.router)
 app.include_router(notifications.router)
 app.include_router(search.router)
 app.include_router(admin.router)
+app.include_router(economy.router)
 
 
 @app.exception_handler(302)
 async def redirect_handler(request: Request, exc):
     return RedirectResponse(url=exc.headers["Location"])
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    print("GLOBAL ERROR CAUGHT:", tb)
+    return PlainTextResponse(tb, status_code=500)

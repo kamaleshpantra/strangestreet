@@ -52,34 +52,34 @@ export function initChatForm(recipientPubKey) {
   const form = document.querySelector('form');
   if (form) {
     form.addEventListener('submit', async function(e) {
-      e.preventDefault(); // Stop native submit to encrypt first
+      if (form.dataset.submitting) return;
+      e.preventDefault();
+      
       const inp = document.getElementById('msg-input');
       const file = document.getElementById('media-input');
       if(!inp.value.trim() && !file.files.length) return;
       
+      form.dataset.submitting = "true";
       const btn = form.querySelector('button[type="submit"]');
       const originalText = btn.textContent;
-      btn.textContent = "Encrypting...";
-      btn.disabled = true;
-
-      // Encrypt the text payload if public key is available
-      if (recipientPubKey && inp.value.trim()) {
-         try {
-           const { encryptMessage } = await import('/static/js/crypto.js');
-           const encryptedBlob = await encryptMessage(recipientPubKey, inp.value);
-           inp.value = "E2E::" + encryptedBlob; // Prefix so we know it's ciphertext
-         } catch(err) {
-           console.error("[E2E] Encryption failed", err);
-           alert("Encryption error, message aborting for safety.");
-           btn.textContent = originalText;
-           btn.disabled = false;
-           return;
-         }
+      
+      try {
+        if (recipientPubKey && inp.value.trim() && !inp.value.startsWith("E2E::")) {
+          btn.textContent = "Encrypting...";
+          btn.disabled = true;
+          const { encryptMessage } = await import('/static/js/crypto.js');
+          const encryptedBlob = await encryptMessage(recipientPubKey, inp.value);
+          inp.value = "E2E::" + encryptedBlob;
+        }
+      } catch(err) {
+        console.error("[Chat] Encryption failed, sending as plaintext.", err);
+      } finally {
+        form.submit();
       }
-      form.submit(); // Send the wrapped payload to the server
     });
   }
 }
+
 
 // Decrypt all messages in the feed upon load
 export async function decryptChatFeed(myUsername) {
@@ -100,11 +100,23 @@ export async function decryptChatFeed(myUsername) {
 }
 
 export async function revealNext(connectionId) {
-  if (!confirm('Are you sure? This will reveal your info to the other person.')) return;
-  const r = await fetch(`/connections/${connectionId}/reveal`, {method:'POST'});
-  const d = await r.json();
-  location.reload();
+  console.log(`[Reveal] Initiating reveal for connection ${connectionId}...`);
+  try {
+    const r = await fetch(`/connections/${connectionId}/reveal`, {method:'POST'});
+    const d = await r.json();
+    console.log(`[Reveal] Server response:`, d);
+    if (r.ok) {
+      location.reload();
+    } else {
+      alert(d.error || d.message || 'Reveal failed');
+    }
+  } catch (e) {
+    console.error(`[Reveal] Fetch error:`, e);
+    alert('Network error: ' + e);
+  }
 }
+
+
 window.revealNext = revealNext;
 
 // Emoji Picker Initialization

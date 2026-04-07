@@ -14,7 +14,7 @@
             {% if post.author.avatar_url %}
               <img src="{{ post.author.avatar_url }}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;" alt=""/>
             {% else %}
-              <div class="av" style="width:20px;height:20px;font-size:8px;">{{ post.author.display_name[0] }}</div>
+              <div class="av" style="width:20px;height:20px;font-size:8px;">{{ post.author.display_name[:1] }}</div>
             {% endif %}
             <strong>{{ post.author.display_name }}</strong>
           </a>

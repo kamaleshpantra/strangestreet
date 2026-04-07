@@ -7,7 +7,7 @@
       {% if user.avatar_url %}
         <img src="{{ user.avatar_url }}" alt=""/>
       {% else %}
-        <div class="av" style="width:52px;height:52px;font-size:18px;border:2px solid var(--bg);">{{ user.display_name[0] }}</div>
+        <div class="av" style="width:52px;height:52px;font-size:18px;border:2px solid var(--bg);">{{ user.display_name[:1] }}</div>
       {% endif %}
     </div>
     <div class="story-name" style="color:var(--red2);">+ Story</div>
@@ -19,7 +19,7 @@
       {% if su.user.avatar_url %}
         <img src="{{ su.user.avatar_url }}" alt=""/>
       {% else %}
-        <div class="av" style="width:52px;height:52px;font-size:18px;border:2px solid var(--bg);">{{ su.user.display_name[0] }}</div>
+        <div class="av" style="width:52px;height:52px;font-size:18px;border:2px solid var(--bg);">{{ su.user.display_name[:1] }}</div>
       {% endif %}
     </div>
     <div class="story-name">{{ su.user.display_name }}</div>

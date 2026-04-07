@@ -59,6 +59,8 @@ class User(Base):
     is_active       = Column(Boolean, default=True)
     is_simulated    = Column(Boolean, default=False)
     is_verified     = Column(Boolean, default=False)
+    is_premium      = Column(Boolean, default=False)
+    street_coins    = Column(Integer, default=0)
     relationship_status  = Column(String(30), nullable=True)
 
     # Alias profile (separate from public)

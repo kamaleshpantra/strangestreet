@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
+import re
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db
 from app.models import User, Interest
 from app.auth import hash_password, verify_password, create_access_token, get_current_user
+from app.services.bloom_service import bloom_service
+from fastapi import Query
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 templates = Jinja2Templates(directory="app/templates")
@@ -27,6 +30,37 @@ def register_page(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("register.html", {
         "request": request, "categories": categories,
     })
+
+
+@router.get("/check-availability")
+def check_availability(
+    type: str = Query(...), 
+    value: str = Query(...),
+    db: Session = Depends(get_db)
+):
+    """Real-time bloom filter check for username/email availability."""
+    value = value.strip().lower()
+    
+    if type == "username":
+        if not bloom_service.might_username_exist(value):
+            return {"available": True} # Definitely not taken
+        # Potential false positive, double-check database
+        exists = db.query(User).filter(User.username.ilike(value)).first() is not None
+        return {"available": not exists}
+        
+    elif type == "email":
+        if not bloom_service.might_email_exist(value):
+            return {"available": True}
+        exists = db.query(User).filter(User.email.ilike(value)).first() is not None
+        return {"available": not exists}
+
+    elif type == "alias":
+        if not bloom_service.might_alias_exist(value):
+            return {"available": True}
+        exists = db.query(User).filter(User.alias_name.ilike(value)).first() is not None
+        return {"available": not exists}
+        
+    return {"available": False}
 
 
 @router.post("/register")
@@ -68,6 +102,25 @@ def register(
         return templates.TemplateResponse("register.html", {
             "request": request, "error": "Email already registered.", "categories": categories,
         })
+    if alias_name and db.query(User).filter(User.alias_name.ilike(alias_name)).first():
+        return templates.TemplateResponse("register.html", {
+            "request": request, "error": "Alias name already taken.", "categories": categories,
+        })
+    if not alias_name:
+        return templates.TemplateResponse("register.html", {
+            "request": request, "error": "Alias name is required.", "categories": categories,
+        })
+    
+    # Regex validation for alphanumeric + underscore
+    pattern = re.compile(r"^[a-zA-Z0-9_]+$")
+    if not pattern.match(username):
+        return templates.TemplateResponse("register.html", {
+            "request": request, "error": "Username can only contain letters, numbers, and underscores.", "categories": categories,
+        })
+    if not pattern.match(alias_name):
+        return templates.TemplateResponse("register.html", {
+            "request": request, "error": "Alias name can only contain letters, numbers, and underscores.", "categories": categories,
+        })
 
     user = User(
         username=username,
@@ -76,7 +129,7 @@ def register(
         display_name=display_name or username,
         bio=bio,
         relationship_status=relationship_status or None,
-        alias_name=alias_name or f"stranger_{username[:8]}",
+        alias_name=alias_name,
         alias_bio=alias_bio or None,
         alias_relationship_status=alias_relationship_status or None,
     )
@@ -91,6 +144,9 @@ def register(
 
     db.commit()
     db.refresh(user)
+
+    # Sync bloom filter
+    bloom_service.add_user(user.username, user.email, user.alias_name)
 
     token = create_access_token({"sub": user.username})
     response = RedirectResponse("/", status_code=302)

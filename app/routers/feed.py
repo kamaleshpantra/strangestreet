@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from database import get_db
-from app.models import Post, User, Comment, FeedScore, Zone, ZoneMembership, Story, Reaction, ZoneScore
+from app.models import Post, User, Comment, FeedScore, Zone, ZoneMembership, Story, Reaction, ZoneScore, PeopleScore, PostFeature
 from app.auth import get_current_user
 from datetime import datetime, timezone
 
@@ -81,25 +81,26 @@ def get_smart_feed(user: User, db: Session):
         post_ids = [s.post_id for s in ml_scores]
 
         # Safety filter: exclude posts with high toxicity
-        from app.models import PostFeature
-        toxic_ids = set()
         toxic_features = db.query(PostFeature).filter(
             PostFeature.post_id.in_(post_ids),
             PostFeature.toxicity_score > 0.3,
         ).all()
         toxic_ids = {pf.post_id for pf in toxic_features}
-
         safe_ids = [pid for pid in post_ids if pid not in toxic_ids]
 
-        posts_by_id = {
-            p.id: p for p in db.query(Post).options(
-                joinedload(Post.author),
-                joinedload(Post.liked_by),
-                joinedload(Post.comments),
-                joinedload(Post.reactions),
-                joinedload(Post.zone),
-            ).filter(Post.id.in_(safe_ids), Post.is_flagged == False).all()
-        }
+        # Efficiently fetch all safe posts with relevant relationships
+        posts_query = db.query(Post).options(
+            joinedload(Post.author),
+            joinedload(Post.liked_by),
+            joinedload(Post.comments),
+            joinedload(Post.reactions),
+            joinedload(Post.zone),
+        ).filter(
+            Post.id.in_(safe_ids),
+            Post.is_flagged == False
+        )
+        
+        posts_by_id = {p.id: p for p in posts_query.all()}
         return [posts_by_id[pid] for pid in safe_ids if pid in posts_by_id]
 
     followed_ids = [u.id for u in user.following] + [user.id]
@@ -129,6 +130,21 @@ def get_smart_feed(user: User, db: Session):
 
 def get_suggested_users(user: User, db: Session, limit: int = 5):
     following_ids = {u.id for u in user.following} | {user.id}
+    
+    # Try fetching ML-ranked stranger recommendations
+    ml_scores = db.query(PeopleScore).filter(
+        PeopleScore.user_id == user.id,
+        PeopleScore.target_id.notin_(following_ids)
+    ).order_by(desc(PeopleScore.score)).limit(limit).all()
+    
+    if ml_scores:
+        target_ids = [s.target_id for s in ml_scores]
+        users = db.query(User).filter(User.id.in_(target_ids)).all()
+        # Sort back to match score order
+        user_map = {u.id: u for u in users}
+        return [user_map[tid] for tid in target_ids if tid in user_map]
+
+    # Fallback to popularity-based ranking
     all_users = db.query(User).filter(
         User.is_active == True,
         User.id.notin_(following_ids),

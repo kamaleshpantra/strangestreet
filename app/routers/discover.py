@@ -68,6 +68,9 @@ def discover_page(
             if not u:
                 continue
             shared_interests = [i for i in u.interests if i.id in my_interest_ids]
+            if not shared_interests:
+                continue
+                
             ps = score_map.get(tid)
             profiles.append({
                 "user": u,
@@ -76,6 +79,9 @@ def discover_page(
                 "total_interests": len(u.interests),
                 "ml_score": round(ps.score, 2) if ps else 0,
             })
+            
+        # Ensure strict sorting by shared_count (descending)
+        profiles.sort(key=lambda p: p["shared_count"], reverse=True)
 
         return templates.TemplateResponse("discover.html", {
             "request": request, "user": user, "profiles": profiles,
@@ -128,7 +134,6 @@ def discover_page(
         db.query(User, shared_count.c.shared)
         .join(shared_count, User.id == shared_count.c.user_id)
         .filter(User.is_active == True)
-        .filter(User.alias_name.isnot(None))  # must have alias set up
         .order_by(shared_count.c.shared.desc())
         .limit(50)
         .all()
@@ -172,12 +177,32 @@ def alias_profile(user_id: int, request: Request, db: Session = Depends(get_db))
 
     # Shared interests
     my_interest_ids = {i.id for i in user.interests}
-    shared_interests = [i for i in target.interests if i.id in my_interest_ids]
-    unique_interests = [i for i in target.interests if i.id not in my_interest_ids]
+    shared_interests_objs = [i for i in target.interests if i.id in my_interest_ids]
+    unique_interests_objs = [i for i in target.interests if i.id not in my_interest_ids]
+
+    # Reveal levels
+    other_reveal_level = 0
+    my_reveal_level = 0
+
+    if connection and connection.status == "accepted":
+        from app.models import Reveal
+        other_reveal = db.query(Reveal).filter(
+            Reveal.connection_id == connection.id,
+            Reveal.user_id == target.id,
+        ).first()
+        my_reveal = db.query(Reveal).filter(
+            Reveal.connection_id == connection.id,
+            Reveal.user_id == user.id,
+        ).first()
+        other_reveal_level = other_reveal.level if other_reveal else 0
+        my_reveal_level = my_reveal.level if my_reveal else 0
 
     return templates.TemplateResponse("alias_profile.html", {
         "request": request, "user": user, "target": target,
         "connection": connection,
-        "shared_interests": shared_interests,
-        "unique_interests": unique_interests,
+        "other_reveal_level": other_reveal_level,
+        "my_reveal_level": my_reveal_level,
+        "shared_interests": shared_interests_objs,
+        "unique_interests": unique_interests_objs,
     })
+
