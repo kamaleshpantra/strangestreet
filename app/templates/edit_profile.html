@@ -15,7 +15,7 @@
             <img id="av-preview" src="{{ user.avatar_url }}" alt=""
                  style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid var(--red-dim);"/>
           {% else %}
-            <div class="av" id="av-initials" style="width:70px;height:70px;font-size:26px;">{{ user.display_name[0] }}</div>
+            <div class="av" id="av-initials" style="width:70px;height:70px;font-size:26px;">{{ user.display_name[:1] }}</div>
             <img id="av-preview" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid var(--red-dim);display:none;" src="" alt=""/>
           {% endif %}
           <div style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.2s;font-size:20px;"

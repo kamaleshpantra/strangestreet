@@ -166,6 +166,19 @@ def reveal_info(connection_id: int, request: Request, db: Session = Depends(get_
     if reveal.level >= 3:
         return JSONResponse({"level": 3, "message": "Already fully revealed"})
 
+    # Check for mutual disclosure dependency
+    other_reveal = db.query(Reveal).filter(
+        Reveal.connection_id == connection_id,
+        Reveal.user_id != user.id
+    ).first()
+    
+    other_level = other_reveal.level if other_reveal else 0
+
+    if reveal.level == 1 and other_level < 1:
+        return JSONResponse({"error": "Waiting for other person to reveal bio", "level": 1}, status_code=400)
+    if reveal.level == 2 and other_level < 2:
+        return JSONResponse({"error": "Waiting for other person to reveal username", "level": 2}, status_code=400)
+
     reveal.level += 1
 
     # Notify the other person

@@ -18,7 +18,7 @@
           {% if c.other_reveal_level >= 3 and c.other.avatar_url %}
             <img src="{{ c.other.avatar_url }}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;"/>
           {% else %}
-            {{ c.other.alias_name[0] if c.other.alias_name else '?' }}
+            {{ c.other.alias_name[:1] if c.other.alias_name else '?' }}
           {% endif %}
         </div>
         <div style="flex:1;min-width:0;">
@@ -58,7 +58,7 @@
         {% if c.other.avatar_url %}
           <img src="{{ c.other.avatar_url }}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0;" alt=""/>
         {% else %}
-          <div class="av" style="width:44px;height:44px;font-size:16px;">{{ c.other.display_name[0] }}</div>
+          <div class="av" style="width:44px;height:44px;font-size:16px;">{{ c.other.display_name[:1] }}</div>
         {% endif %}
         <div style="flex:1;min-width:0;">
           <div style="font-family:var(--font-h);font-size:14px;font-weight:600;">{{ c.other.display_name }}</div>

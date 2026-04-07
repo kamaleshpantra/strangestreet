@@ -38,11 +38,11 @@
     <a href="/discover/profile/{{ p.user.id }}" class="discover-card fade-in" style="animation-delay:{{ loop.index0 * 0.04 }}s;">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
         <div class="av" style="width:48px;height:48px;font-size:18px;background:linear-gradient(135deg,var(--red-dim),var(--bg3));">
-          {{ p.user.alias_name[0] if p.user.alias_name else '?' }}
+          {{ p.user.alias_name[:1] if p.user.alias_name else '?' }}
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-family:var(--font-h);font-size:15px;font-weight:600;">{{ p.user.alias_name }}</div>
-          {% if p.user.alias_relationship_status %}
+          {% if p.user.alias_relationship_status and p.user.alias_relationship_status != 'None' %}
           <div style="font-size:11px;color:var(--text3);margin-top:2px;">{{ p.user.alias_relationship_status.replace('_',' ').title() }}</div>
           {% endif %}
         </div>
@@ -52,7 +52,7 @@
         </div>
       </div>
 
-      {% if p.user.alias_bio %}
+      {% if p.user.alias_bio and p.user.alias_bio != 'None' %}
       <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">
         {{ p.user.alias_bio }}
       </div>

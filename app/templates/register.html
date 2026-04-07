@@ -31,20 +31,22 @@
 
         <!-- STEP 1: Account -->
         <div class="step-panel active" id="step1">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-            <div>
-              <label class="lbl">Display name</label>
-              <input name="display_name" type="text" class="inp" placeholder="Your Name" id="reg-display"/>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+              <div>
+                <label class="lbl">Display name</label>
+                <input name="display_name" type="text" class="inp" placeholder="Your Name" id="reg-display"/>
+              </div>
+              <div style="position:relative;">
+                <label class="lbl">Username</label>
+                <input name="username" type="text" class="inp" placeholder="handle" required pattern="[a-zA-Z0-9_]+" id="reg-user"/>
+                <div id="user-status" style="position:absolute;right:10px;top:32px;font-size:12px;"></div>
+              </div>
             </div>
-            <div>
-              <label class="lbl">Username</label>
-              <input name="username" type="text" class="inp" placeholder="handle" required pattern="[a-zA-Z0-9_]+" id="reg-user"/>
-            </div>
-          </div>
 
-          <div style="margin-bottom:14px;">
+          <div style="margin-bottom:14px;position:relative;">
             <label class="lbl">Email</label>
             <input name="email" type="email" class="inp" placeholder="you@email.com" required id="reg-email"/>
+            <div id="email-status" style="position:absolute;right:10px;top:32px;font-size:12px;"></div>
           </div>
 
           <div style="margin-bottom:14px;">
@@ -133,10 +135,11 @@
             </div>
           </div>
 
-          <div style="margin-bottom:14px;">
+          <div style="margin-bottom:14px;position:relative;">
             <label class="lbl">Alias Name</label>
-            <input name="alias_name" type="text" class="inp" placeholder="Mystery Stranger, Night Owl, etc." id="reg-alias"/>
-            <div style="font-size:11px;color:var(--text3);margin-top:4px;">This is what strangers will see. Make it fun!</div>
+            <input name="alias_name" type="text" class="inp" placeholder="mysterious_stranger" required pattern="[a-zA-Z0-9_]+" id="reg-alias"/>
+            <div id="alias-status" style="position:absolute;right:10px;top:32px;font-size:12px;"></div>
+            <div style="font-size:11px;color:var(--text3);margin-top:4px;">Alphanumeric and underscores only. No spaces.</div>
           </div>
 
           <div style="margin-bottom:14px;">
@@ -193,10 +196,30 @@ function goStep(n) {
       return;
     }
     
+    // Prevent advancement if availability checks failed
+    if (user.dataset.valid === "false") {
+      user.focus();
+      return;
+    }
+    if (email.dataset.valid === "false") {
+      email.focus();
+      return;
+    }
+
     if (pass.value !== confirm.value) {
       alert("Passwords do not match!");
       confirm.focus();
       return;
+    }
+  }
+
+  // Validate step 3 (final)
+  if (n === 'submit' || (typeof n === 'number' && n > 3)) {
+    const alias = document.getElementById('reg-alias');
+    if (!alias.value || alias.dataset.valid === "false") {
+      alert("Please provide a unique alias name.");
+      alias.focus();
+      return false;
     }
   }
 
@@ -245,5 +268,79 @@ function togglePass(id, btn) {
     btn.textContent = '👁️';
   }
 }
+
+// Debounce helper
+function debounce(func, wait) {
+  let timeout;
+  return function(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+async function checkAvailability(type, value, statusEl, inputEl) {
+  if (!value) {
+    statusEl.innerHTML = '';
+    inputEl.dataset.valid = "false";
+    inputEl.style.borderColor = "";
+    return;
+  }
+  statusEl.innerHTML = '🔄';
+  try {
+    const res = await fetch(`/auth/check-availability?type=${type}&value=${encodeURIComponent(value)}`);
+    const data = await res.json();
+    if (data.available) {
+      statusEl.innerHTML = '✅';
+      inputEl.dataset.valid = "true";
+      inputEl.style.borderColor = "var(--green)";
+    } else {
+      statusEl.innerHTML = '❌ Taken';
+      inputEl.dataset.valid = "false";
+      inputEl.style.borderColor = "var(--red)";
+    }
+  } catch(e) {
+    statusEl.innerHTML = '';
+  }
+}
+
+document.getElementById('reg-user').addEventListener('input', debounce(function(e) {
+  checkAvailability('username', e.target.value, document.getElementById('user-status'), e.target);
+}, 400));
+
+document.getElementById('reg-email').addEventListener('input', debounce(function(e) {
+  checkAvailability('email', e.target.value, document.getElementById('email-status'), e.target);
+}, 400));
+
+document.getElementById('reg-alias').addEventListener('input', debounce(function(e) {
+  checkAvailability('alias', e.target.value, document.getElementById('alias-status'), e.target);
+}, 400));
+
+// Force validation on form submit
+document.getElementById('reg-form').addEventListener('submit', function(e) {
+  const user = document.getElementById('reg-user');
+  const alias = document.getElementById('reg-alias');
+  const pattern = /^[a-zA-Z0-9_]+$/;
+
+  if (!pattern.test(user.value)) {
+    e.preventDefault();
+    alert("Username can only contain letters, numbers, and underscores.");
+    user.focus();
+    return;
+  }
+
+  if (!pattern.test(alias.value)) {
+    e.preventDefault();
+    alert("Alias name can only contain letters, numbers, and underscores.");
+    alias.focus();
+    return;
+  }
+
+  if (!alias.value || alias.dataset.valid === "false") {
+    e.preventDefault();
+    alert("Please provide a unique alias name.");
+    alias.focus();
+  }
+});
+
 </script>
 {% endblock %}

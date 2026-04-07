@@ -21,3 +21,5 @@ Pillow==10.3.0
 faker==24.0.0
 apscheduler==3.10.4
 sentence-transformers==3.0.1
+cloudinary==1.40.0
+pybloom-live==4.0.0

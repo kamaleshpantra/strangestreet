@@ -28,11 +28,9 @@ RUN mkdir -p app/static/uploads/posts \
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
-ENV PORT=7860
 
-# Expose the port Hugging Face Spaces expects
-EXPOSE 7860
+# Render injects PORT at runtime (default 10000)
+EXPOSE 10000
 
-# Run the application
-# We use 0.0.0.0 to allow external access within the HF infrastructure
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Run the application — Render sets $PORT automatically
+CMD gunicorn main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000}

@@ -62,6 +62,21 @@ export async function votePoll(postId, optId) {
 }
 window.votePoll = votePoll;
 
+export async function deletePost(id) {
+  if (!confirm('Are you sure you want to delete this post?')) return;
+  try {
+    const r = await fetch(`/posts/${id}/delete`, { method: 'POST' });
+    if(r.ok) {
+      location.reload(); 
+    } else {
+      const d = await r.json();
+      alert(d.error || 'Failed to delete post');
+    }
+  } catch(e) { console.error('Delete failed:', e); }
+}
+window.deletePost = deletePost;
+
+
 // Utility layout operations hook
 export function initFeed() {
   console.log("Strange Street Feed Engine Initialized");

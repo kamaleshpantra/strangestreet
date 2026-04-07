@@ -1780,7 +1780,7 @@
           {% if user.avatar_url %}
           <img src="{{ user.avatar_url }}" style="width:24px;height:24px;border-radius:50%;object-fit:cover;" alt="" />
           {% else %}
-          <div class="av" style="width:24px;height:24px;font-size:10px;">{{ user.display_name[0] }}</div>
+          <div class="av" style="width:24px;height:24px;font-size:10px;">{{ user.display_name[:1] }}</div>
           {% endif %}
           <span style="font-size:13px;">{{ user.username }}</span>
         </a>
