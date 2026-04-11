@@ -25,8 +25,23 @@ from app.logging_config import logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all database tables on startup (legacy, Alembic will handle this in prod)
+    # Create all database tables on startup
     Base.metadata.create_all(bind=engine)
+    
+    # Auto-patch missing columns for Render
+    from sqlalchemy import text
+    with engine.begin() as conn:
+        for col in [
+            "is_simulated BOOLEAN DEFAULT FALSE",
+            "is_verified BOOLEAN DEFAULT FALSE",
+            "is_premium BOOLEAN DEFAULT FALSE",
+            "street_coins INTEGER DEFAULT 0"
+        ]:
+            try:
+                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col}"))
+            except Exception:
+                pass
+                
     logger.info("Database tables verified/created")
 
     # Ensure upload directories exist
