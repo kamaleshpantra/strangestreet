@@ -80,6 +80,8 @@ def profile(username: str, request: Request, db: Session = Depends(get_db)):
         "following_count":len(profile_user.following),
         "post_count":     len(posts),
         "memberships":    memberships,
+        "followers_list": profile_user.followers,
+        "following_list": profile_user.following,
     })
 
 

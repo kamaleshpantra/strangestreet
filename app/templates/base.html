@@ -1757,16 +1757,136 @@
       </div>
 
       {% if user %}
-      <form action="/search" method="get" style="flex:1;max-width:320px;margin:0 20px;position:relative;">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-          style="width:14px;height:14px;position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
-        <input type="text" name="q" placeholder="Search Street..." class="inp"
-          style="padding:6px 12px 6px 34px;background:rgba(255,255,255,0.03);border-radius:20px;font-size:13px;height:34px;border-color:transparent;" />
-        <input type="hidden" name="t" value="posts" />
-      </form>
+      <div style="flex:1;max-width:320px;margin:0 20px;position:relative;" id="search-ac-wrap">
+        <form action="/search" method="get" id="search-ac-form" autocomplete="off">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            style="width:14px;height:14px;position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text3);z-index:2;">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" name="q" id="search-ac-input" placeholder="Search Street..."
+            class="inp" style="padding:6px 12px 6px 34px;background:rgba(255,255,255,0.03);border-radius:20px;font-size:13px;height:34px;border-color:transparent;" />
+          <input type="hidden" name="t" value="posts" />
+        </form>
+        <!-- Autocomplete Dropdown -->
+        <div id="search-ac-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#141418;border:1px solid var(--border2);border-radius:12px;overflow:hidden;z-index:300;box-shadow:0 12px 40px rgba(0,0,0,0.8);max-height:400px;overflow-y:auto;">
+        </div>
+      </div>
+      <style>
+        .ac-section-label{font-family:var(--font-m);font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);padding:10px 14px 4px;display:flex;align-items:center;gap:6px;}
+        .ac-section-label::after{content:'';flex:1;height:1px;background:var(--border);}
+        .ac-item{display:flex;align-items:center;gap:10px;padding:8px 14px;cursor:pointer;transition:background 0.1s;}
+        .ac-item:hover,.ac-item.ac-active{background:var(--bg3);}
+        .ac-item-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .ac-item-sub{font-size:11px;color:var(--text3);font-family:var(--font-m);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .ac-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--red-dim),#1a0404);border:1px solid var(--red-dim);display:flex;align-items:center;justify-content:center;font-family:var(--font-h);font-weight:700;font-size:11px;color:var(--red3);flex-shrink:0;}
+        .ac-av img{width:100%;height:100%;border-radius:50%;object-fit:cover;}
+        .ac-post-icon{width:28px;height:28px;border-radius:6px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+        .ac-footer{padding:8px 14px;text-align:center;font-size:12px;color:var(--text3);border-top:1px solid var(--border);cursor:pointer;transition:background 0.1s;}
+        .ac-footer:hover{background:var(--bg3);color:var(--red2);}
+      </style>
+      <script>
+      (function(){
+        const input = document.getElementById('search-ac-input');
+        const dropdown = document.getElementById('search-ac-dropdown');
+        const form = document.getElementById('search-ac-form');
+        if(!input || !dropdown) return;
+
+        let debounceTimer = null;
+        let activeIdx = -1;
+
+        input.addEventListener('input', function(){
+          const q = this.value.trim();
+          clearTimeout(debounceTimer);
+          if(q.length < 2){ dropdown.style.display='none'; return; }
+          debounceTimer = setTimeout(()=> fetchSuggestions(q), 250);
+        });
+
+        input.addEventListener('focus', function(){
+          if(this.value.trim().length >= 2 && dropdown.innerHTML.trim()) dropdown.style.display='block';
+        });
+
+        document.addEventListener('click', function(e){
+          if(!document.getElementById('search-ac-wrap').contains(e.target)) dropdown.style.display='none';
+        });
+
+        input.addEventListener('keydown', function(e){
+          const items = dropdown.querySelectorAll('.ac-item');
+          if(!items.length || dropdown.style.display==='none') return;
+
+          if(e.key === 'ArrowDown'){
+            e.preventDefault();
+            activeIdx = Math.min(activeIdx + 1, items.length - 1);
+            updateActive(items);
+          } else if(e.key === 'ArrowUp'){
+            e.preventDefault();
+            activeIdx = Math.max(activeIdx - 1, 0);
+            updateActive(items);
+          } else if(e.key === 'Enter' && activeIdx >= 0){
+            e.preventDefault();
+            items[activeIdx].click();
+          } else if(e.key === 'Escape'){
+            dropdown.style.display='none';
+            activeIdx = -1;
+          }
+        });
+
+        function updateActive(items){
+          items.forEach((it,i)=>{
+            it.classList.toggle('ac-active', i === activeIdx);
+            if(i === activeIdx) it.scrollIntoView({block:'nearest'});
+          });
+        }
+
+        async function fetchSuggestions(q){
+          try{
+            const r = await fetch('/search/autocomplete?q=' + encodeURIComponent(q));
+            const data = await r.json();
+            renderDropdown(data, q);
+          }catch(e){}
+        }
+
+        function renderDropdown(data, q){
+          let html = '';
+          activeIdx = -1;
+
+          if(data.users && data.users.length){
+            html += '<div class="ac-section-label">People</div>';
+            data.users.forEach(u => {
+              const av = u.avatar_url
+                ? '<div class="ac-av"><img src="'+u.avatar_url+'" alt=""/></div>'
+                : '<div class="ac-av">'+u.display_name.charAt(0).toUpperCase()+'</div>';
+              html += '<div class="ac-item" onclick="window.location=\'/users/'+u.username+'\'">'
+                + av
+                + '<div style="min-width:0;flex:1;">'
+                + '<div class="ac-item-name">'+u.display_name+'</div>'
+                + '<div class="ac-item-sub">u/'+u.username+'</div>'
+                + '</div></div>';
+            });
+          }
+
+          if(data.posts && data.posts.length){
+            html += '<div class="ac-section-label">Posts</div>';
+            data.posts.forEach(p => {
+              html += '<div class="ac-item" onclick="window.location=\'/posts/'+p.id+'\'">'
+                + '<div class="ac-post-icon">📝</div>'
+                + '<div style="min-width:0;flex:1;">'
+                + '<div class="ac-item-name">'+p.snippet+(p.snippet.length >= 80 ? '…' : '')+'</div>'
+                + '<div class="ac-item-sub">by '+p.author+'</div>'
+                + '</div></div>';
+            });
+          }
+
+          if(html){
+            html += '<div class="ac-footer" onclick="document.getElementById(\'search-ac-form\').submit()">See all results for "'+q+'"</div>';
+            dropdown.innerHTML = html;
+            dropdown.style.display = 'block';
+          } else {
+            dropdown.style.display = 'none';
+          }
+        }
+      })();
+      </script>
       {% endif %}
 
       <div class="nav-right">
