@@ -30,17 +30,18 @@ async def lifespan(app: FastAPI):
     
     # Auto-patch missing columns for Render
     from sqlalchemy import text
-    with engine.begin() as conn:
-        for col in [
-            "is_simulated BOOLEAN DEFAULT FALSE",
-            "is_verified BOOLEAN DEFAULT FALSE",
-            "is_premium BOOLEAN DEFAULT FALSE",
-            "street_coins INTEGER DEFAULT 0"
-        ]:
-            try:
+    for col in [
+        "is_simulated BOOLEAN DEFAULT FALSE",
+        "is_verified BOOLEAN DEFAULT FALSE",
+        "is_premium BOOLEAN DEFAULT FALSE",
+        "street_coins INTEGER DEFAULT 0"
+    ]:
+        try:
+            with engine.connect() as conn:
                 conn.execute(text(f"ALTER TABLE users ADD COLUMN {col}"))
-            except Exception:
-                pass
+                conn.commit()
+        except Exception:
+            pass
                 
     logger.info("Database tables verified/created")
 
