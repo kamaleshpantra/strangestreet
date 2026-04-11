@@ -30,19 +30,31 @@ async def lifespan(app: FastAPI):
     
     # Auto-patch missing columns for Render
     from sqlalchemy import text
-    for col in [
-        "is_simulated BOOLEAN DEFAULT FALSE",
-        "is_verified BOOLEAN DEFAULT FALSE",
-        "is_premium BOOLEAN DEFAULT FALSE",
-        "street_coins INTEGER DEFAULT 0",
-        "public_key TEXT",
-        "alias_name VARCHAR(50)",
-        "alias_bio TEXT",
-        "alias_relationship_status VARCHAR(30)"
-    ]:
+    patches = [
+        ("users", "is_simulated BOOLEAN DEFAULT FALSE"),
+        ("users", "is_verified BOOLEAN DEFAULT FALSE"),
+        ("users", "is_premium BOOLEAN DEFAULT FALSE"),
+        ("users", "street_coins INTEGER DEFAULT 0"),
+        ("users", "public_key TEXT"),
+        ("users", "alias_name VARCHAR(50)"),
+        ("users", "alias_bio TEXT"),
+        ("users", "alias_relationship_status VARCHAR(30)"),
+        ("posts", "zone_id INTEGER"),
+        ("posts", "is_flagged BOOLEAN DEFAULT FALSE"),
+        ("posts", "flag_reason VARCHAR(100)"),
+        ("posts", "is_pinned BOOLEAN DEFAULT FALSE"),
+        ("posts", "flair_id INTEGER"),
+        ("messages", "media_type VARCHAR(20)"),
+        ("messages", "file_name VARCHAR(200)"),
+        ("messages", "connection_id INTEGER"),
+        ("zones", "banner_url VARCHAR(500)"),
+        ("zones", "zone_type VARCHAR(20) DEFAULT 'public'"),
+        ("zones", "rules TEXT")
+    ]
+    for table, col in patches:
         try:
             with engine.connect() as conn:
-                conn.execute(text(f"ALTER TABLE users ADD COLUMN {col}"))
+                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col}"))
                 conn.commit()
         except Exception:
             pass
