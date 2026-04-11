@@ -49,7 +49,8 @@ async def lifespan(app: FastAPI):
         ("messages", "connection_id INTEGER"),
         ("zones", "banner_url VARCHAR(500)"),
         ("zones", "zone_type VARCHAR(20) DEFAULT 'public'"),
-        ("zones", "rules TEXT")
+        ("zones", "rules TEXT"),
+        ("comments", "parent_id INTEGER")
     ]
     for table, col in patches:
         try:
