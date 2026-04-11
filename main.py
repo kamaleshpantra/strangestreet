@@ -34,7 +34,11 @@ async def lifespan(app: FastAPI):
         "is_simulated BOOLEAN DEFAULT FALSE",
         "is_verified BOOLEAN DEFAULT FALSE",
         "is_premium BOOLEAN DEFAULT FALSE",
-        "street_coins INTEGER DEFAULT 0"
+        "street_coins INTEGER DEFAULT 0",
+        "public_key TEXT",
+        "alias_name VARCHAR(50)",
+        "alias_bio TEXT",
+        "alias_relationship_status VARCHAR(30)"
     ]:
         try:
             with engine.connect() as conn:
