@@ -1,14 +1,19 @@
+import os
+# Force Machine Learning libraries to use minimum memory & threads (Crucial for 512MB limit)
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse, PlainTextResponse
 import traceback
-from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 from database import engine, Base, SessionLocal
 from config import settings
-import os
 
 # Import all models so SQLAlchemy creates tables
 import app.models  # noqa
