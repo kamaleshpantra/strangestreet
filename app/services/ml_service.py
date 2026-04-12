@@ -1,6 +1,3 @@
-from sentence_transformers import SentenceTransformer
-import torch
-
 class MLService:
     _model = None
 
@@ -8,6 +5,8 @@ class MLService:
     def get_model(cls):
         """Lazy load the sentence transformer model."""
         if cls._model is None:
+            from sentence_transformers import SentenceTransformer
+            import torch
             print("  [MLService] Loading all-MiniLM-L6-v2...")
             # Using CPU for standard web server thread safety and efficiency
             cls._model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
