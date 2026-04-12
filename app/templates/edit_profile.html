@@ -5,8 +5,9 @@
   <h1 style="font-family:var(--font-h);font-size:22px;font-weight:700;margin-bottom:20px;letter-spacing:-0.3px;">Edit profile</h1>
 
   <div class="card card-p" style="padding:24px;">
-    <form action="/users/{{ user.username }}/edit" method="post" enctype="multipart/form-data">
+    <form id="edit-form" action="/users/{{ user.username }}/edit" method="post" enctype="multipart/form-data">
       <input type="hidden" name="interest_ids" id="interest-ids" value="{{ user_interest_ids|join(',') if user_interest_ids else '' }}"/>
+      <input type="hidden" name="remove_avatar" id="remove-avatar-flag" value="false"/>
 
       <!-- Avatar section -->
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid var(--border);">
@@ -14,6 +15,7 @@
           {% if user.avatar_url %}
             <img id="av-preview" src="{{ user.avatar_url }}" alt=""
                  style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid var(--red-dim);"/>
+            <div class="av" id="av-initials" style="width:70px;height:70px;font-size:26px;display:none;">{{ user.display_name[:1] }}</div>
           {% else %}
             <div class="av" id="av-initials" style="width:70px;height:70px;font-size:26px;">{{ user.display_name[:1] }}</div>
             <img id="av-preview" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid var(--red-dim);display:none;" src="" alt=""/>
@@ -24,9 +26,26 @@
         <div>
           <div style="font-family:var(--font-h);font-size:15px;font-weight:600;">{{ user.display_name }}</div>
           <div style="font-family:var(--font-m);font-size:11px;color:var(--text3);">u/{{ user.username }}</div>
-          <button type="button" onclick="document.getElementById('av-input').click()" style="margin-top:6px;font-size:12px;color:var(--red2);background:transparent;border:none;cursor:pointer;">Change photo</button>
+          <div style="display:flex; gap:10px; margin-top:6px;">
+            <button type="button" onclick="document.getElementById('av-input').click()" style="font-size:12px;color:var(--red2);background:transparent;border:none;cursor:pointer;">Change photo</button>
+            <button type="button" id="remove-btn" onclick="removeAvatarUI()" style="font-size:12px;color:var(--text3);background:transparent;border:none;cursor:pointer; {% if not user.avatar_url %}display:none;{% endif %}">Remove photo</button>
+          </div>
         </div>
-        <input type="file" id="av-input" name="avatar_file" accept="image/*" style="display:none;" onchange="previewAvatar(this)"/>
+        <input type="file" id="av-input" name="avatar_file" accept="image/*" style="display:none;" onchange="openCropModal(this)"/>
+      </div>
+
+      <!-- Crop Modal -->
+      <div id="crop-modal" class="lightbox" style="display:none; z-index:99999;">
+        <div style="background:var(--bg); border:1px solid var(--border); border-radius:12px; width:100%; max-width:400px; padding:20px; box-shadow:0 8px 32px rgba(0,0,0,0.8);">
+          <h3 style="font-family:var(--font-h); font-size:16px; margin-bottom:15px; text-align:center; font-weight:700;">Position & Crop Photo</h3>
+          <div style="width:100%; height:300px; background:#000; overflow:hidden; border-radius:8px; margin-bottom:20px;">
+            <img id="crop-image" src="" style="display:block; max-width:100%;" />
+          </div>
+          <div style="display:flex; gap:10px;">
+            <button type="button" class="btn-primary" style="flex:1; justify-content:center;" onclick="confirmCrop()">Apply</button>
+            <button type="button" class="btn-ghost" style="flex:1; justify-content:center;" onclick="closeCropModal()">Cancel</button>
+          </div>
+        </div>
       </div>
 
       <!-- PUBLIC PROFILE -->
@@ -113,20 +132,108 @@
 {% endblock %}
 
 {% block scripts %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<style>
+/* Circular Cropper CSS (Instagram style) */
+.cropper-view-box, .cropper-face {
+  border-radius: 50%;
+}
+.cropper-view-box {
+  outline: 0;
+  box-shadow: 0 0 0 1px var(--red);
+}
+</style>
 <script>
 const selectedInterests = new Set(
   document.getElementById('interest-ids').value.split(',').filter(x => x)
 );
 
-function previewAvatar(input) {
+let cropper;
+const avInput = document.getElementById('av-input');
+const cropModal = document.getElementById('crop-modal');
+const cropImage = document.getElementById('crop-image');
+const avPreview = document.getElementById('av-preview');
+const avInitials = document.getElementById('av-initials');
+const removeBtn = document.getElementById('remove-btn');
+const removeFlag = document.getElementById('remove-avatar-flag');
+let croppedBlob = null;
+
+function removeAvatarUI() {
+  removeFlag.value = "true";
+  avInput.value = "";
+  croppedBlob = null;
+  // Restore UI to fallback initials
+  avPreview.style.display = 'none';
+  avPreview.src = '';
+  if (avInitials) avInitials.style.display = 'flex';
+  removeBtn.style.display = 'none';
+}
+
+function openCropModal(input) {
   const file = input.files[0];
   if (!file) return;
+  // Reset remove flag if we are setting a new photo
+  removeFlag.value = "false";
+  
   const url = URL.createObjectURL(file);
-  const preview = document.getElementById('av-preview');
-  const initials = document.getElementById('av-initials');
-  preview.src = url;
-  preview.style.display = 'block';
-  if (initials) initials.style.display = 'none';
+  cropImage.src = url;
+  cropModal.style.display = 'flex';
+  
+  if (cropper) {
+    cropper.destroy();
+  }
+  
+  cropper = new Cropper(cropImage, {
+    aspectRatio: 1,
+    viewMode: 1,
+    dragMode: 'move',
+    guides: false,
+    center: false,
+    highlight: false,
+    cropBoxMovable: true,
+    cropBoxResizable: true,
+    toggleDragModeOnDblclick: false,
+  });
+}
+
+function closeCropModal() {
+  cropModal.style.display = 'none';
+  if (cropper) {
+    cropper.destroy();
+    cropper = null;
+  }
+  // If no blob was created before and they closed it, reset file input
+  if (!croppedBlob && removeFlag.value !== "true") {
+    avInput.value = "";
+  }
+}
+
+function confirmCrop() {
+  if (!cropper) return;
+  
+  cropper.getCroppedCanvas({
+    width: 400,
+    height: 400,
+    imageSmoothingEnabled: true,
+    imageSmoothingQuality: 'high',
+  }).toBlob((blob) => {
+    croppedBlob = blob;
+    
+    // Update live preview
+    const rawImgUrl = URL.createObjectURL(blob);
+    avPreview.src = rawImgUrl;
+    avPreview.style.display = 'block';
+    if (avInitials) avInitials.style.display = 'none';
+    removeBtn.style.display = 'block';
+    
+    // Replace the real file input value
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(new File([blob], "avatar.jpg", { type: "image/jpeg" }));
+    avInput.files = dataTransfer.files;
+    
+    closeCropModal();
+  }, 'image/jpeg', 0.95);
 }
 
 function toggleInterest(el) {

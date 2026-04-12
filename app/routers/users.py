@@ -143,6 +143,7 @@ async def edit_profile(
     alias_bio:           str        = Form(""),
     alias_relationship_status: str  = Form(""),
     interest_ids:        str        = Form(""),
+    remove_avatar:       str        = Form("false"),
     avatar_file:         UploadFile = File(None),
     db:                  Session    = Depends(get_db),
 ):
@@ -164,6 +165,23 @@ async def edit_profile(
         user.interests = interests
     else:
         user.interests = []
+
+    # Handle avatar removal
+    if remove_avatar == "true":
+        if user.avatar_url:
+            if user.avatar_url.startswith("/static/uploads/avatars/"):
+                old_path = user.avatar_url.lstrip("/")
+                if os.path.exists(old_path):
+                    try:
+                        os.remove(old_path)
+                    except Exception:
+                        pass
+            elif "res.cloudinary.com" in user.avatar_url:
+                from app.services.cloudinary_service import CloudinaryService
+                public_id = CloudinaryService.get_public_id(user.avatar_url)
+                if public_id:
+                    CloudinaryService.delete_image(public_id)
+            user.avatar_url = None
 
     # Handle avatar upload
     if avatar_file and avatar_file.filename:
