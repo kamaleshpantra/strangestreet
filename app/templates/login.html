@@ -1,56 +1,810 @@
-{% extends "base.html" %}
-{% block title %}Sign in — Strange Street{% endblock %}
-{% block content %}
-<div style="min-height:calc(100vh - 120px);display:flex;align-items:center;justify-content:center;padding:40px 0;">
-  <div style="width:100%;max-width:380px;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strange Street – Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <div style="text-align:center;margin-bottom:28px;">
-      <div style="display:flex;justify-content:center;margin-bottom:12px;">
-        <div style="font-family:var(--font-h);font-size:32px;font-weight:800;letter-spacing:-1px;line-height:60px;height:60px;display:flex;align-items:center;overflow:visible;">
-          <span style="color:var(--red);">S</span>trange Street
+  :root {
+    --red: #E8192C;
+    --red-dark: #b5101e;
+    --black: #0a0a0a;
+    --surface: #141414;
+    --card: #1c1c1c;
+    --border: #2a2a2a;
+    --muted: #6b6b6b;
+    --text: #f0f0f0;
+    --text-dim: #a0a0a0;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--black);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    flex: 1.1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: var(--black);
+  }
+
+  /* animated grid background */
+  .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(232,25,44,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232,25,44,0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+    animation: gridDrift 20s linear infinite;
+  }
+  @keyframes gridDrift {
+    from { background-position: 0 0; }
+    to   { background-position: 48px 48px; }
+  }
+
+  /* red glow blob */
+  .glow-blob {
+    position: absolute;
+    width: 520px;
+    height: 520px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,25,44,0.18) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse 4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+    50%       { transform: translate(-50%, -50%) scale(1.12); opacity: 1; }
+  }
+
+  /* phone mockup stack */
+  .phones-wrapper {
+    position: relative;
+    width: 340px;
+    height: 420px;
+    z-index: 2;
+  }
+
+  .phone {
+    position: absolute;
+    border-radius: 28px;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+    transition: transform 0.4s ease;
+  }
+
+  .phone-main {
+    width: 200px;
+    height: 380px;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    animation: floatMain 3.5s ease-in-out infinite;
+  }
+  @keyframes floatMain {
+    0%,100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(-10px); }
+  }
+
+  .phone-left {
+    width: 170px;
+    height: 330px;
+    top: 60px;
+    left: -10px;
+    z-index: 2;
+    transform: rotate(-8deg);
+    animation: floatLeft 3.5s ease-in-out infinite;
+    animation-delay: 0.5s;
+    opacity: 0.75;
+  }
+  @keyframes floatLeft {
+    0%,100% { transform: rotate(-8deg) translateY(0); }
+    50%      { transform: rotate(-8deg) translateY(-7px); }
+  }
+
+  .phone-right {
+    width: 170px;
+    height: 330px;
+    top: 60px;
+    right: -10px;
+    z-index: 2;
+    transform: rotate(8deg);
+    animation: floatRight 3.5s ease-in-out infinite;
+    animation-delay: 1s;
+    opacity: 0.75;
+  }
+  @keyframes floatRight {
+    0%,100% { transform: rotate(8deg) translateY(0); }
+    50%      { transform: rotate(8deg) translateY(-7px); }
+  }
+
+  /* phone screen content */
+  .phone-screen {
+    width: 100%;
+    height: 100%;
+    padding: 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--surface);
+  }
+
+  .pscreen-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .pscreen-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: var(--red);
+  }
+  .pscreen-logo span { color: var(--text); }
+
+  /* feed posts */
+  .post-card {
+    background: var(--card);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  .post-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    background: linear-gradient(135deg, #1e1e1e, #2d2d2d);
+  }
+  .post-meta {
+    padding: 6px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .post-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .post-name {
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+  .post-likes {
+    font-size: 8px;
+    color: var(--muted);
+  }
+  .post-actions {
+    padding: 0 10px 8px;
+    display: flex;
+    gap: 10px;
+  }
+  .post-btn {
+    font-size: 8px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .post-btn.liked { color: var(--red); }
+
+  /* stories row (main phone only) */
+  .stories-row {
+    display: flex;
+    gap: 8px;
+    overflow: hidden;
+  }
+  .story-bubble {
+    flex-shrink: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid var(--red);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    background: var(--card);
+  }
+
+  /* side phone content: zone cards */
+  .zone-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .zone-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: rgba(232,25,44,0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .zone-info h4 { font-size: 9px; font-weight: 600; color: var(--text); }
+  .zone-info p  { font-size: 8px; color: var(--muted); margin-top: 1px; }
+
+  /* floating badges */
+  .badge {
+    position: absolute;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 12px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text);
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+  .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .badge-top  { top: 30px; left: 30px; animation: badgeFloat1 4s ease-in-out infinite; }
+  .badge-bot  { bottom: 30px; right: 20px; animation: badgeFloat2 4s ease-in-out infinite; animation-delay: 1s; }
+  @keyframes badgeFloat1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  @keyframes badgeFloat2 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(6px)} }
+
+  .badge-icon { font-size: 14px; }
+
+  /* tagline under phones */
+  .tagline-block {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    margin-top: 28px;
+  }
+  .tagline-block h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 42px;
+    letter-spacing: 3px;
+    line-height: 1;
+    color: var(--text);
+  }
+  .tagline-block h2 .accent { color: var(--red); }
+  .tagline-block p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  /* feature pills */
+  .pill-row {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    position: relative;
+    z-index: 2;
+  }
+  .pill {
+    background: rgba(232,25,44,0.1);
+    border: 1px solid rgba(232,25,44,0.25);
+    color: #f87f8a;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    width: 1px;
+    height: 100vh;
+    background: linear-gradient(to bottom, transparent, var(--border) 20%, var(--border) 80%, transparent);
+    flex-shrink: 0;
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    flex: 0.85;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 48px 56px;
+    background: var(--black);
+    position: relative;
+  }
+
+  .right-panel::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 80% 20%, rgba(232,25,44,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .form-container {
+    width: 100%;
+    max-width: 360px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* brand */
+  .brand {
+    margin-bottom: 36px;
+  }
+  .brand-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 38px;
+    letter-spacing: 3px;
+    display: inline-block;
+  }
+  .brand-logo .s { color: var(--red); }
+  .brand-logo .rest { color: var(--text); }
+
+  .brand-tagline {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  .form-title {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: -0.5px;
+  }
+  .form-subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+
+  /* inputs */
+  .field { margin-bottom: 18px; }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+  .input-wrap {
+    position: relative;
+  }
+  .field input {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 13px 16px;
+    outline: none;
+    transition: border-color 0.2s, background 0.2s;
+    appearance: none;
+  }
+  .field input::placeholder { color: var(--muted); }
+  .field input:focus {
+    border-color: var(--red);
+    background: #181818;
+  }
+  .eye-btn {
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+  .eye-btn:hover { color: var(--text); }
+
+  .forgot {
+    display: block;
+    text-align: right;
+    font-size: 12px;
+    color: var(--red);
+    text-decoration: none;
+    margin-top: -10px;
+    margin-bottom: 22px;
+    transition: opacity 0.2s;
+  }
+  .forgot:hover { opacity: 0.75; }
+
+  .btn-signin {
+    width: 100%;
+    background: var(--red);
+    color: #fff;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: background 0.2s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-signin::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 100%);
+  }
+  .btn-signin:hover  { background: #cc1525; }
+  .btn-signin:active { transform: scale(0.98); }
+
+  /* OR divider */
+  .or-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .or-row::before, .or-row::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* social buttons */
+  .social-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .social-btn {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 11px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .social-btn:hover { border-color: #444; color: var(--text); }
+  .social-icon { font-size: 16px; }
+
+  .register-link {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .register-link a {
+    color: var(--red);
+    text-decoration: none;
+    font-weight: 600;
+    transition: opacity 0.2s;
+  }
+  .register-link a:hover { opacity: 0.8; }
+
+  /* nav */
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 32px;
+    z-index: 10;
+    background: rgba(10,10,10,0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 2px;
+  }
+  .nav-logo .s { color: var(--red); }
+  .nav-logo .rest { color: var(--text); }
+  .nav-btns { display: flex; gap: 10px; }
+  .nav-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+  }
+  .nav-btn.ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1.5px solid var(--border);
+  }
+  .nav-btn.ghost:hover { border-color: #555; }
+  .nav-btn.solid {
+    background: var(--red);
+    color: #fff;
+  }
+  .nav-btn.solid:hover { background: var(--red-dark); }
+
+  /* entry animation */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .left-panel  { animation: fadeUp 0.6s ease forwards; }
+  .right-panel { animation: fadeUp 0.6s 0.15s ease both; }
+
+  /* Mobile adjustments */
+  @media (max-width: 900px) {
+    .left-panel, .divider { display: none; }
+    body { flex-direction: column; }
+    .right-panel { flex: 1; padding: 24px; }
+    .form-container { max-width: 100%; }
+    .nav { padding: 12px 16px; }
+  }
+
+  .alert-err {
+    background: rgba(232, 25, 44, 0.1);
+    border: 1.5px solid rgba(232, 25, 44, 0.2);
+    color: #f87f8a;
+    padding: 12px;
+    border-radius: 10px;
+    font-size: 13px;
+    margin-bottom: 18px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="nav-logo" onclick="window.location.href='/'" style="cursor:pointer;"><span class="s">S</span><span class="rest">trange Street</span></div>
+  <div class="nav-btns">
+    <a href="/auth/login" class="nav-btn ghost">Sign in</a>
+    <a href="/auth/register" class="nav-btn solid">Join Street</a>
+  </div>
+</nav>
+
+<!-- LEFT PANEL: App Showcase -->
+<div class="left-panel">
+  <div class="grid-bg"></div>
+  <div class="glow-blob"></div>
+
+  <!-- floating badge top -->
+  <div class="badge badge-top">
+    <div class="badge-dot"></div>
+    <span>12.4k Streeters online</span>
+  </div>
+
+  <!-- phone mockups -->
+  <div class="phones-wrapper">
+
+    <!-- left phone: zones -->
+    <div class="phone phone-left">
+      <div class="phone-screen">
+        <div class="pscreen-header">
+          <div class="pscreen-logo"><span>S</span>treet</div>
+        </div>
+        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:1px;">ZONES</div>
+        <div class="zone-card">
+          <div class="zone-icon">🎵</div>
+          <div class="zone-info"><h4>Music Zone</h4><p>4.2k members</p></div>
+        </div>
+        <div class="zone-card">
+          <div class="zone-icon">🎬</div>
+          <div class="zone-info"><h4>Film Street</h4><p>8.9k members</p></div>
+        </div>
+        <div class="zone-card">
+          <div class="zone-icon">🚀</div>
+          <div class="zone-info"><h4>Tech Hub</h4><p>11.3k members</p></div>
+        </div>
+        <div class="zone-card">
+          <div class="zone-icon">🎮</div>
+          <div class="zone-info"><h4>Gaming Lane</h4><p>7.6k members</p></div>
+        </div>
+        <div class="zone-card">
+          <div class="zone-icon">🍕</div>
+          <div class="zone-info"><h4>Food Corner</h4><p>3.1k members</p></div>
         </div>
       </div>
-      <h1 style="font-family:var(--font-h);font-size:20px;font-weight:700;letter-spacing:-0.4px;">Welcome back</h1>
-      <p style="font-size:13px;color:var(--text3);margin-top:2px;">Sign in to continue your journey</p>
     </div>
 
-    <div class="card card-p" style="padding:28px;">
-      {% if error %}
-      <div class="alert-err" style="margin-bottom:18px;">{{ error }}</div>
-      {% endif %}
-
-      <form action="/auth/login" method="post">
-        <div style="margin-bottom:14px;">
-          <label class="lbl">Username</label>
-          <input name="username" type="text" class="inp" placeholder="your username" required autofocus/>
+    <!-- main phone: feed -->
+    <div class="phone phone-main">
+      <div class="phone-screen">
+        <div class="pscreen-header">
+          <div class="pscreen-logo"><span>S</span><span style="color:var(--text)">trange Street</span></div>
         </div>
-        <div style="margin-bottom:20px;">
-          <label class="lbl">Password</label>
-          <div style="position:relative;">
-            <input name="password" type="password" class="inp" placeholder="your password" required id="login-pass"/>
-            <button type="button" onclick="togglePass('login-pass', this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);font-size:14px;padding:5px;">👁️</button>
+        <!-- connections -->
+        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:1px;">CONNECTIONS</div>
+        <div class="stories-row">
+          <div class="story-bubble" style="border-color: #22c55e;">👨‍💻</div>
+          <div class="story-bubble" style="border-color: #3b82f6;">👩‍🎨</div>
+          <div class="story-bubble" style="border-color: #a855f7;">🎮</div>
+          <div class="story-bubble" style="border-color: #eab308;">🍕</div>
+        </div>
+        <!-- post 1 -->
+        <div class="post-card">
+          <div class="post-img" style="background:linear-gradient(135deg,#1a1a2e,#2d1b1b);">🌆</div>
+          <div class="post-meta">
+            <div class="post-avatar">K</div>
+            <div class="post-name">streetwalker</div>
+          </div>
+          <div class="post-actions">
+            <div class="post-btn liked">❤️ 284</div>
+            <div class="post-btn">💬 32</div>
           </div>
         </div>
-        <button type="submit" class="btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:10px;">Sign in</button>
-      </form>
+        <!-- post 2 -->
+        <div class="post-card">
+          <div class="post-img" style="background:linear-gradient(135deg,#0d1f0d,#1f1a0d);">🌿</div>
+          <div class="post-meta">
+            <div class="post-avatar" style="background:#6d28d9;">M</div>
+            <div class="post-name">midnight_m</div>
+          </div>
+          <div class="post-actions">
+            <div class="post-btn">❤️ 91</div>
+            <div class="post-btn">💬 14</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      <div style="text-align:center;margin-top:18px;font-size:13px;color:var(--text3);">
-        New here? <a href="/auth/register" style="color:var(--red2);font-weight:500;">Join the Street</a>
+    <!-- right phone: explore/nodes -->
+    <div class="phone phone-right">
+      <div class="phone-screen">
+        <div class="pscreen-header">
+          <div class="pscreen-logo"><span>S</span>treet</div>
+        </div>
+        <div style="font-size:9px;color:var(--muted);margin-top:8px;font-weight:600;letter-spacing:1px;">MESSAGING</div>
+        <div class="zone-card" style="margin-top:4px;">
+          <div class="zone-icon">💬</div>
+          <div class="zone-info"><h4>Alice</h4><p>Hey, ready for the meetup?</p></div>
+        </div>
+        <div class="zone-card" style="margin-top:4px;">
+          <div class="zone-icon">💬</div>
+          <div class="zone-info"><h4>Bob</h4><p>The code is pushed! 🚀</p></div>
+        </div>
       </div>
     </div>
 
   </div>
+
+  <!-- tagline -->
+  <div class="tagline-block">
+    <h2>YOUR <span class="accent">STREET</span>,<br>YOUR RULES</h2>
+    <p>Posts · Zones · Connections · Messaging</p>
+  </div>
+
+  <!-- feature pills -->
+  <div class="pill-row">
+    <div class="pill">📸 Media</div>
+    <div class="pill">🏘️ Zones</div>
+    <div class="pill">🤝 Connections</div>
+    <div class="pill">💬 Messaging</div>
+  </div>
+
+
 </div>
+
+<!-- DIVIDER -->
+<div class="divider"></div>
+
+<!-- RIGHT PANEL: Login Form -->
+<div class="right-panel">
+  <div class="form-container">
+
+    <div class="brand">
+      <div class="brand-logo">
+        <span class="s">S</span><span class="rest">trange Street</span>
+      </div>
+      <div class="brand-tagline">The streets never sleep.</div>
+    </div>
+
+    <div class="form-title">Welcome back</div>
+    <div class="form-subtitle">Sign in to continue your journey</div>
+
+    {% if error %}
+    <div class="alert-err">{{ error }}</div>
+    {% endif %}
+
+    <form action="/auth/login" method="post">
+      <div class="field">
+        <label>Username</label>
+        <div class="input-wrap">
+          <input name="username" type="text" placeholder="your username" autocomplete="off" required autofocus>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="input-wrap">
+          <input name="password" type="password" id="pwd" placeholder="your password" required>
+          <button type="button" class="eye-btn" onclick="togglePwd()" title="Toggle visibility">👁</button>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-signin">Sign in</button>
+    </form>
+
+    <div style="margin-top: 24px;" class="register-link">
+      New here? <a href="/auth/register">Join the Street</a>
+    </div>
+
+  </div>
+</div>
+
 <script>
-function togglePass(id, btn) {
-  const inp = document.getElementById(id);
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    btn.textContent = '🔒';
-  } else {
-    inp.type = 'password';
-    btn.textContent = '👁️';
+  function togglePwd() {
+    const p = document.getElementById('pwd');
+    p.type = p.type === 'password' ? 'text' : 'password';
   }
-}
 </script>
-{% endblock %}
+</body>
+</html>

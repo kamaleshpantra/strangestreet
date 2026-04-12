@@ -10,6 +10,7 @@ Mirrors the real pipeline conceptually:
   5) Zones: interest + semantic + activity blend (simplified)
   6) Safety: same regex heuristic as ml/safety.py
   7) Evaluation: Precision@K, coverage, diversity
+  8) Bandits: Real-Time Reinforcement Learning UCB sorting
 
 Run from repo root:
     python ml/simulate_pipeline_demo.py
