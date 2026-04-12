@@ -93,6 +93,9 @@ def view_post(post_id: int, request: Request, db: Session = Depends(get_db)):
     if not post:
         raise HTTPException(status_code=404)
 
+    # Increment Explicit Click Count for Bandit Algorithm
+    post.click_count = (post.click_count or 0) + 1
+
     log_interaction(db, user.id, post.id, "view")
     liked = any(u.id == user.id for u in post.liked_by)
     bookmarked = any(b.user_id == user.id for b in post.bookmarks)
