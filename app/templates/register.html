@@ -1,232 +1,511 @@
-{% extends "base.html" %}
-{% block title %}Join — Strange Street{% endblock %}
-{% block content %}
-<div style="min-height:calc(100vh - 120px);display:flex;align-items:center;justify-content:center;padding:40px 0;">
-  <div style="width:100%;max-width:580px;">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strange Street – Join the Street</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <div style="text-align:center;margin-bottom:28px;">
-      <div style="display:flex;justify-content:center;margin-bottom:12px;">
-        <div style="font-family:var(--font-h);font-size:32px;font-weight:800;letter-spacing:-1px;line-height:60px;height:60px;display:flex;align-items:center;overflow:visible;">
-          <span style="color:var(--red);">S</span>trange Street
+  :root {
+    --red: #E8192C;
+    --red-dark: #b5101e;
+    --black: #0a0a0a;
+    --surface: #141414;
+    --card: #1c1c1c;
+    --border: #2a2a2a;
+    --muted: #6b6b6b;
+    --text: #f0f0f0;
+    --text-dim: #a0a0a0;
+    --green: #22c55e;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--black);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    flex: 1.1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    background: var(--black);
+  }
+
+  .grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(232,25,44,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(232,25,44,0.06) 1px, transparent 1px);
+    background-size: 48px 48px;
+    animation: gridDrift 20s linear infinite;
+  }
+  @keyframes gridDrift {
+    from { background-position: 0 0; }
+    to   { background-position: 48px 48px; }
+  }
+
+  .glow-blob {
+    position: absolute;
+    width: 520px;
+    height: 520px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(232,25,44,0.18) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse 4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+    50%       { transform: translate(-50%, -50%) scale(1.12); opacity: 1; }
+  }
+
+  .phones-wrapper {
+    position: relative;
+    width: 340px;
+    height: 420px;
+    z-index: 2;
+  }
+
+  .phone {
+    position: absolute;
+    border-radius: 28px;
+    background: var(--card);
+    border: 1.5px solid var(--border);
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.7);
+    transition: transform 0.4s ease;
+  }
+
+  .phone-main { width: 200px; height: 380px; top: 20px; left: 50%; transform: translateX(-50%); z-index: 3; animation: floatMain 3.5s ease-in-out infinite; }
+  .phone-left { width: 170px; height: 330px; top: 60px; left: -10px; z-index: 2; transform: rotate(-8deg); animation: floatLeft 3.5s ease-in-out infinite; animation-delay: 0.5s; opacity: 0.75; }
+  .phone-right { width: 170px; height: 330px; top: 60px; right: -10px; z-index: 2; transform: rotate(8deg); animation: floatRight 3.5s ease-in-out infinite; animation-delay: 1s; opacity: 0.75; }
+
+  @keyframes floatMain { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-10px); } }
+  @keyframes floatLeft { 0%,100% { transform: rotate(-8deg) translateY(0); } 50% { transform: rotate(-8deg) translateY(-7px); } }
+  @keyframes floatRight { 0%,100% { transform: rotate(8deg) translateY(0); } 50% { transform: rotate(8deg) translateY(-7px); } }
+
+  .phone-screen { width: 100%; height: 100%; padding: 16px 12px; display: flex; flex-direction: column; gap: 10px; background: var(--surface); }
+  .pscreen-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .pscreen-logo { font-family: 'Bebas Neue', sans-serif; font-size: 15px; letter-spacing: 1px; color: var(--red); }
+  .pscreen-logo span { color: var(--text); }
+
+  .post-card { background: var(--card); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+  .post-img { width: 100%; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; font-size: 28px; background: linear-gradient(135deg, #1e1e1e, #2d2d2d); }
+  .post-meta { padding: 6px 10px; display: flex; align-items: center; gap: 6px; }
+  .post-avatar { width: 20px; height: 20px; border-radius: 50%; background: var(--red); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .post-name { font-size: 9px; font-weight: 600; color: var(--text); flex: 1; }
+  .post-actions { padding: 0 10px 8px; display: flex; gap: 10px; }
+  .post-btn { font-size: 8px; color: var(--muted); display: flex; align-items: center; gap: 3px; }
+  .post-btn.liked { color: var(--red); }
+
+  .stories-row { display: flex; gap: 8px; overflow: hidden; }
+  .story-bubble { flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--red); display: flex; align-items: center; justify-content: center; font-size: 14px; background: var(--card); }
+
+  .zone-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; }
+  .zone-icon { width: 28px; height: 28px; border-radius: 8px; background: rgba(232,25,44,0.15); display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .zone-info h4 { font-size: 9px; font-weight: 600; color: var(--text); }
+  .zone-info p  { font-size: 8px; color: var(--muted); margin-top: 1px; }
+
+  .badge { position: absolute; background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 11px; font-weight: 500; color: var(--text); z-index: 5; display: flex; align-items: center; gap: 6px; box-shadow: 0 8px 30px rgba(0,0,0,0.5); white-space: nowrap; }
+  .badge-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; flex-shrink: 0; animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+  .badge-top { top: 30px; left: 30px; animation: badgeFloat1 4s ease-in-out infinite; }
+  @keyframes badgeFloat1 { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+
+  .tagline-block { position: relative; z-index: 2; text-align: center; margin-top: 28px; }
+  .tagline-block h2 { font-family: 'Bebas Neue', sans-serif; font-size: 38px; letter-spacing: 2px; line-height: 1; color: var(--text); }
+  .tagline-block h2 .accent { color: var(--red); }
+  .tagline-block p { font-size: 12px; color: var(--muted); margin-top: 8px; letter-spacing: 0.5px; }
+
+  .pill-row { display: flex; gap: 6px; justify-content: center; margin-top: 12px; flex-wrap: wrap; z-index: 2; position: relative; }
+  .pill { background: rgba(232,25,44,0.1); border: 1px solid rgba(232,25,44,0.25); color: #f87f8a; font-size: 10px; font-weight: 500; padding: 4px 10px; border-radius: 20px; display: flex; align-items: center; gap: 4px; }
+
+  .divider { width: 1px; height: 100vh; background: linear-gradient(to bottom, transparent, var(--border) 20%, var(--border) 80%, transparent); flex-shrink: 0; }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    flex: 0.9;
+    display: block; /* Changed from flex to block for better scrolling */
+    padding: 80px 40px; /* Added more top/bottom padding */
+    background: var(--black);
+    position: relative;
+    overflow-y: auto;
+  }
+
+  .form-container {
+    width: 100%;
+    max-width: 520px;
+    margin: 0 auto; /* Center the container in the block panel */
+    position: relative;
+    z-index: 1;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  .brand { margin-bottom: 24px; text-align: left; }
+  .brand-logo { font-family: 'Bebas Neue', sans-serif; font-size: 32px; letter-spacing: 2px; }
+  .brand-logo .s { color: var(--red); }
+  .brand-tagline { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Wizard Styling */
+  .wizard-steps { display: flex; gap: 10px; margin-bottom: 24px; }
+  .wizard-step {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    position: relative;
+    transition: background 0.3s;
+  }
+  .wizard-step.active { background: var(--red); }
+  .wizard-step.done { background: var(--red-dark); }
+  .wizard-step::after {
+    content: attr(data-title);
+    position: absolute;
+    top: 10px;
+    left: 0;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .wizard-step.active::after { color: var(--text); }
+
+  .step-panel { display: none; }
+  .step-panel.active { display: block; animation: fadeInForm 0.4s ease; }
+  @keyframes fadeInForm { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .input-wrap { position: relative; }
+  .inp, select {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 12px 14px;
+    outline: none;
+    transition: all 0.2s;
+  }
+  .inp:focus { border-color: var(--red); background: #181818; }
+  textarea.inp { resize: none; }
+
+  .btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+  .btn-primary { background: var(--red); color: #fff; width: 100%; }
+  .btn-primary:hover { background: #cc1525; }
+  .btn-ghost { background: transparent; color: var(--text); border: 1.5px solid var(--border); width: 100%; }
+  .btn-ghost:hover { border-color: #555; }
+
+  .nav { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: center; justify-content: space-between; padding: 16px 32px; z-index: 10; background: rgba(10,10,10,0.8); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; cursor: pointer; }
+  .nav-logo .s { color: var(--red); }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* Interest Picker */
+  .interest-picker { height: 260px; overflow-y: auto; padding-right: 8px; border: 1px solid var(--border); border-radius: 10px; padding: 12px; background: #0f0f0f; }
+  .cat-group { margin-bottom: 18px; }
+  .cat-label { font-size: 11px; font-weight: 700; color: var(--red); margin-bottom: 8px; text-transform: uppercase; }
+  .pills-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ipill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .ipill:hover { border-color: #444; }
+  .ipill.selected { background: var(--red); border-color: var(--red); color: white; }
+
+  /* Mobile */
+  @media (max-width: 900px) {
+    .left-panel, .divider { display: none; }
+    .right-panel { padding: 20px; padding-top: 80px; }
+    .form-container { max-width: 100%; }
+  }
+
+  .alert-err { background: rgba(232, 25, 44, 0.1); border: 1.5px solid rgba(232, 25, 44, 0.2); color: #f87f8a; padding: 12px; border-radius: 10px; font-size: 13px; margin-bottom: 18px; text-align: center; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-logo" onclick="window.location.href='/'"><span class="s">S</span>Strange Street</div>
+  <div style="display: flex; gap: 10px;">
+    <a href="/auth/login" class="nav-btn" style="color:var(--text); font-size:13px; font-weight:600; text-decoration:none;">Sign in</a>
+  </div>
+</nav>
+
+<div class="left-panel">
+  <div class="grid-bg"></div>
+  <div class="glow-blob"></div>
+
+  <div class="badge badge-top">
+    <div class="badge-dot"></div>
+    <span>12.4k Streeters online</span>
+  </div>
+
+  <div class="phones-wrapper">
+    <div class="phone phone-left">
+      <div class="phone-screen">
+        <div class="pscreen-header"><div class="pscreen-logo"><span>S</span>treet</div></div>
+        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:1px;">ZONES</div>
+        <div class="zone-card"><div class="zone-icon">🚀</div><div class="zone-info"><h4>Tech Hub</h4><p>11.3k members</p></div></div>
+        <div class="zone-card"><div class="zone-icon">🎮</div><div class="zone-info"><h4>Gaming Lane</h4><p>7.6k members</p></div></div>
+        <div class="zone-card"><div class="zone-icon">🍕</div><div class="zone-info"><h4>Food Corner</h4><p>3.1k members</p></div></div>
+      </div>
+    </div>
+
+    <div class="phone phone-main">
+      <div class="phone-screen">
+        <div class="pscreen-header"><div class="pscreen-logo"><span>S</span>trange Street</div></div>
+        <div style="font-size:9px;color:var(--muted);margin-bottom:4px;font-weight:600;letter-spacing:1px;">CONNECTIONS</div>
+        <div class="stories-row">
+          <div class="story-bubble" style="border-color: #22c55e;">👨‍💻</div>
+          <div class="story-bubble" style="border-color: #3b82f6;">👩‍🎨</div>
+          <div class="story-bubble" style="border-color: #a855f7;">🎮</div>
+        </div>
+        <div class="post-card">
+          <div class="post-img" style="background:linear-gradient(135deg,#1a1a2e,#2d1b1b);">🌆</div>
+          <div class="post-meta"><div class="post-avatar">K</div><div class="post-name">streetwalker</div></div>
         </div>
       </div>
-      <h1 style="font-family:var(--font-h);font-size:20px;font-weight:700;letter-spacing:-0.4px;">Join the Street</h1>
-      <p style="font-size:13px;color:var(--text3);margin-top:2px;">Create your account to start connecting</p>
     </div>
 
-    <!-- Step Wizard -->
-    <div class="wizard-steps">
-      <div class="wizard-step active" id="ws1">1 · Account</div>
-      <div class="wizard-step" id="ws2">2 · Interests</div>
-      <div class="wizard-step" id="ws3">3 · Alias</div>
-    </div>
-
-    <div class="card card-p" style="padding:28px;">
-      {% if error %}
-      <div class="alert-err" style="margin-bottom:18px;">{{ error }}</div>
-      {% endif %}
-
-      <form action="/auth/register" method="post" id="reg-form">
-        <input type="hidden" name="interest_ids" id="interest-ids" value=""/>
-
-        <!-- STEP 1: Account -->
-        <div class="step-panel active" id="step1">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-              <div>
-                <label class="lbl">Display name</label>
-                <input name="display_name" type="text" class="inp" placeholder="Your Name" id="reg-display"/>
-              </div>
-              <div style="position:relative;">
-                <label class="lbl">Username</label>
-                <input name="username" type="text" class="inp" placeholder="handle" required pattern="[a-zA-Z0-9_]+" id="reg-user"/>
-                <div id="user-status" style="position:absolute;right:10px;top:32px;font-size:12px;"></div>
-              </div>
-            </div>
-
-          <div style="margin-bottom:14px;position:relative;">
-            <label class="lbl">Email</label>
-            <input name="email" type="email" class="inp" placeholder="you@email.com" required id="reg-email"/>
-            <div id="email-status" style="position:absolute;right:10px;top:32px;font-size:12px;"></div>
-          </div>
-
-          <div style="margin-bottom:14px;">
-            <label class="lbl">Public Bio</label>
-            <textarea name="bio" class="inp" rows="2" placeholder="Tell the world a bit about yourself..." id="reg-bio"></textarea>
-            <div style="font-size:11px;color:var(--text3);margin-top:4px;">This will be visible on your public profile.</div>
-          </div>
-
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-            <div>
-              <label class="lbl">Password</label>
-              <div style="position:relative;">
-                <input name="password" type="password" class="inp" placeholder="min 6 chars" required minlength="6" id="reg-pass"/>
-                <button type="button" onclick="togglePass('reg-pass', this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);font-size:14px;padding:5px;">👁️</button>
-              </div>
-            </div>
-            <div>
-              <label class="lbl">Confirm Password</label>
-              <div style="position:relative;">
-                <input name="confirm_password" type="password" class="inp" placeholder="repeat password" required id="reg-confirm"/>
-                <button type="button" onclick="togglePass('reg-confirm', this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text3);font-size:14px;padding:5px;">👁️</button>
-              </div>
-            </div>
-          </div>
-
-          <div style="margin-bottom:14px;">
-            <label class="lbl">Relationship status</label>
-            <select name="relationship_status" class="inp">
-              <option value="">Prefer not to say</option>
-              <option value="single">Single</option>
-              <option value="in_relationship">In a relationship</option>
-              <option value="married">Married</option>
-              <option value="engaged">Engaged</option>
-              <option value="its_complicated">It's complicated</option>
-              <option value="open_relationship">Open relationship</option>
-              <option value="divorced">Divorced</option>
-              <option value="widowed">Widowed</option>
-            </select>
-          </div>
-
-          <button type="button" onclick="goStep(2)" class="btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:10px;margin-top:6px;">
-            Next → Choose Interests
-          </button>
-        </div>
-
-        <!-- STEP 2: Interests -->
-        <div class="step-panel" id="step2">
-          <div style="margin-bottom:14px;">
-            <input type="text" class="inp" placeholder="🔍 Search interests..." oninput="filterInterests(this.value)" id="interest-search"/>
-          </div>
-
-          <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">
-            Selected: <span id="selected-count">0</span> interests
-          </div>
-
-          <div class="interest-picker" id="interest-picker">
-            {% for cat_name, items in categories.items() %}
-            <div class="cat-group" data-cat="{{ cat_name }}">
-              <div class="cat-label">{{ cat_name }}</div>
-              <div class="pills-wrap">
-                {% for interest in items %}
-                <span class="pill" data-id="{{ interest.id }}" data-name="{{ interest.name|lower }}" onclick="toggleInterest(this)">
-                  <span class="pill-icon">{{ interest.icon }}</span>
-                  {{ interest.name }}
-                </span>
-                {% endfor %}
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-
-          <div style="display:flex;gap:10px;margin-top:16px;">
-            <button type="button" onclick="goStep(1)" class="btn-ghost" style="flex:1;justify-content:center;">← Back</button>
-            <button type="button" onclick="goStep(3)" class="btn-primary" style="flex:2;justify-content:center;font-size:14px;padding:10px;">
-              Next → Create Alias
-            </button>
-          </div>
-        </div>
-
-        <!-- STEP 3: Alias Profile -->
-        <div class="step-panel" id="step3">
-          <div style="padding:14px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:18px;">
-            <div style="font-size:12px;color:var(--text2);line-height:1.6;">
-              🎭 <strong>Your alias profile</strong> is what strangers see when discovering you by interests.
-              It's completely separate from your public profile. No real identity is shown.
-            </div>
-          </div>
-
-          <div style="margin-bottom:14px;position:relative;">
-            <label class="lbl">Alias Name</label>
-            <input name="alias_name" type="text" class="inp" placeholder="mysterious_stranger" required pattern="[a-zA-Z0-9_]+" id="reg-alias"/>
-            <div id="alias-status" style="position:absolute;right:10px;top:32px;font-size:12px;"></div>
-            <div style="font-size:11px;color:var(--text3);margin-top:4px;">Alphanumeric and underscores only. No spaces.</div>
-          </div>
-
-          <div style="margin-bottom:14px;">
-            <label class="lbl">Alias Bio</label>
-            <textarea name="alias_bio" class="inp" rows="3" placeholder="A short bio for your anonymous profile..."></textarea>
-          </div>
-
-          <div style="margin-bottom:18px;">
-            <label class="lbl">Alias Relationship Status</label>
-            <select name="alias_relationship_status" class="inp">
-              <option value="">Prefer not to say</option>
-              <option value="single">Single</option>
-              <option value="in_relationship">In a relationship</option>
-              <option value="married">Married</option>
-              <option value="its_complicated">It's complicated</option>
-            </select>
-            <div style="font-size:11px;color:var(--text3);margin-top:4px;">This can differ from your public status</div>
-          </div>
-
-          <div style="display:flex;gap:10px;">
-            <button type="button" onclick="goStep(2)" class="btn-ghost" style="flex:1;justify-content:center;">← Back</button>
-            <button type="submit" class="btn-primary" style="flex:2;justify-content:center;font-size:14px;padding:10px;">
-              🚀 Create Account
-            </button>
-          </div>
-        </div>
-      </form>
-
-      <div style="text-align:center;margin-top:18px;font-size:13px;color:var(--text3);">
-        Already on the Street? <a href="/auth/login" style="color:var(--red2);font-weight:500;">Sign in</a>
+    <div class="phone phone-right">
+      <div class="phone-screen">
+        <div class="pscreen-header"><div class="pscreen-logo"><span>S</span>treet</div></div>
+        <div style="font-size:9px;color:var(--muted);margin-top:8px;font-weight:600;letter-spacing:1px;">MESSAGING</div>
+        <div class="zone-card"><div class="zone-icon">💬</div><div class="zone-info"><h4>Alice</h4><p>Hey, ready for the meetup?</p></div></div>
+        <div class="zone-card"><div class="zone-icon">💬</div><div class="zone-info"><h4>Bob</h4><p>The code is pushed! 🚀</p></div></div>
       </div>
     </div>
+  </div>
 
+  <div class="tagline-block">
+    <h2>JOIN THE <span class="accent">STREET</span>,<br>CONNECT NOW</h2>
+    <p>Posts · Zones · Connections · Messaging</p>
+  </div>
+
+  <div class="pill-row">
+    <div class="pill">🏘️ Zones</div>
+    <div class="pill">🤝 Connections</div>
+    <div class="pill">💬 Messaging</div>
   </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<div class="divider"></div>
+
+<div class="right-panel">
+  <div class="form-container">
+    <div class="brand">
+      <div class="brand-logo"><span class="s">S</span>trange Street</div>
+      <div class="brand-tagline">Create your account to start your journey.</div>
+    </div>
+
+    <div class="wizard-steps">
+      <div class="wizard-step active" id="ws1" data-title="Account"></div>
+      <div class="wizard-step" id="ws2" data-title="Interests"></div>
+      <div class="wizard-step" id="ws3" data-title="Alias"></div>
+    </div>
+
+    {% if error %}
+    <div class="alert-err">{{ error }}</div>
+    {% endif %}
+
+    <form action="/auth/register" method="post" id="reg-form">
+      <input type="hidden" name="interest_ids" id="interest-ids" value=""/>
+
+      <!-- STEP 1: Account -->
+      <div class="step-panel active" id="step1">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+          <div class="field">
+            <label>Display Name</label>
+            <input name="display_name" type="text" class="inp" placeholder="Your Name" id="reg-display">
+          </div>
+          <div class="field">
+            <label>Username</label>
+            <div class="input-wrap">
+              <input name="username" type="text" class="inp" placeholder="handle" required pattern="[a-zA-Z0-9_]+" id="reg-user">
+              <div id="user-status" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Email</label>
+          <div class="input-wrap">
+            <input name="email" type="email" class="inp" placeholder="you@email.com" required id="reg-email">
+            <div id="email-status" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Bio</label>
+          <textarea name="bio" class="inp" rows="2" placeholder="Tell the world about yourself..." id="reg-bio"></textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+          <div class="field">
+            <label>Password</label>
+            <div class="input-wrap">
+              <input name="password" type="password" class="inp" placeholder="min 6 chars" required minlength="6" id="reg-pass">
+              <button type="button" onclick="togglePass('reg-pass', this)" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;">👁️</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Confirm</label>
+            <div class="input-wrap">
+              <input name="confirm_password" type="password" class="inp" placeholder="repeat" required id="reg-confirm">
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Relationship Status</label>
+          <select name="relationship_status" class="inp">
+            <option value="">Prefer not to say</option>
+            <option value="single">Single</option>
+            <option value="in_relationship">In a relationship</option>
+            <option value="married">Married</option>
+            <option value="engaged">Engaged</option>
+            <option value="its_complicated">It's complicated</option>
+            <option value="open_relationship">Open relationship</option>
+            <option value="divorced">Divorced</option>
+            <option value="widowed">Widowed</option>
+          </select>
+        </div>
+
+        <button type="button" onclick="goStep(2)" class="btn btn-primary">Next: Choose Interests →</button>
+      </div>
+
+      <!-- STEP 2: Interests -->
+      <div class="step-panel" id="step2">
+        <div class="field">
+          <input type="text" class="inp" placeholder="🔍 Search interests..." oninput="filterInterests(this.value)" id="interest-search">
+        </div>
+
+        <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">
+          Selected: <span id="selected-count" style="color:var(--red);font-weight:700;">0</span>
+        </div>
+
+        <div class="interest-picker" id="interest-picker">
+          {% for cat_name, items in categories.items() %}
+          <div class="cat-group" data-cat="{{ cat_name }}">
+            <div class="cat-label">{{ cat_name }}</div>
+            <div class="pills-wrap">
+              {% for interest in items %}
+              <span class="ipill" data-id="{{ interest.id }}" data-name="{{ interest.name|lower }}" onclick="toggleInterest(this)">
+                <span>{{ interest.icon }}</span>
+                {{ interest.name }}
+              </span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button type="button" onclick="goStep(1)" class="btn btn-ghost" style="flex:1;">Back</button>
+          <button type="button" onclick="goStep(3)" class="btn btn-primary" style="flex:2;">Next: Create Alias →</button>
+        </div>
+      </div>
+
+      <!-- STEP 3: Alias Profile -->
+      <div class="step-panel" id="step3">
+        <div style="padding:12px;background:rgba(232,25,44,0.05);border-radius:10px;margin-bottom:20px;font-size:12px;line-height:1.5;color:var(--text-dim); border: 1px solid rgba(232, 25, 44, 0.1);">
+          🎭 <strong>Your alias profile</strong> is anonymous. No real identity is shown when strangers find you by interests.
+        </div>
+
+        <div class="field">
+          <label>Alias Name</label>
+          <div class="input-wrap">
+            <input name="alias_name" type="text" class="inp" placeholder="mysterious_handle" required pattern="[a-zA-Z0-9_]+" id="reg-alias">
+            <div id="alias-status" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);font-size:12px;"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Alias Bio</label>
+          <textarea name="alias_bio" class="inp" rows="3" placeholder="Public bio for your alias..."></textarea>
+        </div>
+
+        <div class="field">
+          <label>Alias Relationship</label>
+          <select name="alias_relationship_status" class="inp">
+            <option value="">Prefer not to say</option>
+            <option value="single">Single</option>
+            <option value="in_relationship">In a relationship</option>
+            <option value="married">Married</option>
+            <option value="its_complicated">It's complicated</option>
+          </select>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:20px;">
+          <button type="button" onclick="goStep(2)" class="btn btn-ghost" style="flex:1;">Back</button>
+          <button type="submit" class="btn btn-primary" style="flex:2;">🚀 Create Account</button>
+        </div>
+      </div>
+    </form>
+
+    <div style="text-align:center;margin-top:24px;font-size:13px;color:var(--muted);">
+      Already a Streeter? <a href="/auth/login" style="color:var(--red); font-weight:600; text-decoration:none;">Sign in</a>
+    </div>
+  </div>
+</div>
+
 <script>
 const selectedInterests = new Set();
 
 function goStep(n) {
-  // Validate step 1
   if (n === 2) {
     const user = document.getElementById('reg-user');
     const email = document.getElementById('reg-email');
     const pass = document.getElementById('reg-pass');
     const confirm = document.getElementById('reg-confirm');
-    
     if (!user.value || !email.value || !pass.value || pass.value.length < 6) {
-      if (!user.value) user.focus();
-      else if (!email.value) email.focus();
-      else pass.focus();
-      return;
+       alert("Please fill in basic account details."); return;
     }
-    
-    // Prevent advancement if availability checks failed
-    if (user.dataset.valid === "false") {
-      user.focus();
-      return;
-    }
-    if (email.dataset.valid === "false") {
-      email.focus();
-      return;
-    }
-
-    if (pass.value !== confirm.value) {
-      alert("Passwords do not match!");
-      confirm.focus();
-      return;
-    }
-  }
-
-  // Validate step 3 (final)
-  if (n === 'submit' || (typeof n === 'number' && n > 3)) {
-    const alias = document.getElementById('reg-alias');
-    if (!alias.value || alias.dataset.valid === "false") {
-      alert("Please provide a unique alias name.");
-      alias.focus();
-      return false;
-    }
+    if (pass.value !== confirm.value) { alert("Passwords match error!"); return; }
   }
 
   document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.wizard-step').forEach(s => {
-    s.classList.remove('active','done');
-  });
+  document.querySelectorAll('.wizard-step').forEach(s => s.classList.remove('active','done'));
   document.getElementById('step'+n).classList.add('active');
   for (let i = 1; i <= 3; i++) {
     const ws = document.getElementById('ws'+i);
@@ -238,11 +517,9 @@ function goStep(n) {
 function toggleInterest(el) {
   const id = el.dataset.id;
   if (selectedInterests.has(id)) {
-    selectedInterests.delete(id);
-    el.classList.remove('selected');
+    selectedInterests.delete(id); el.classList.remove('selected');
   } else {
-    selectedInterests.add(id);
-    el.classList.add('selected');
+    selectedInterests.add(id); el.classList.add('selected');
   }
   document.getElementById('selected-count').textContent = selectedInterests.size;
   document.getElementById('interest-ids').value = Array.from(selectedInterests).join(',');
@@ -250,26 +527,15 @@ function toggleInterest(el) {
 
 function filterInterests(q) {
   q = q.toLowerCase();
-  document.querySelectorAll('#interest-picker .pill').forEach(p => {
-    p.style.display = p.dataset.name.includes(q) ? '' : 'none';
-  });
-  document.querySelectorAll('#interest-picker .cat-group').forEach(g => {
-    const visible = g.querySelectorAll('.pill[style=""], .pill:not([style])');
-    g.style.display = visible.length ? '' : 'none';
-  });
-}
-function togglePass(id, btn) {
-  const inp = document.getElementById(id);
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    btn.textContent = '🔒';
-  } else {
-    inp.type = 'password';
-    btn.textContent = '👁️';
-  }
+  document.querySelectorAll('.ipill').forEach(p => { p.style.display = p.dataset.name.includes(q) ? '' : 'none'; });
 }
 
-// Debounce helper
+function togglePass(id, btn) {
+  const inp = document.getElementById(id);
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁️' : '🔒';
+}
+
 function debounce(func, wait) {
   let timeout;
   return function(...args) {
@@ -279,68 +545,25 @@ function debounce(func, wait) {
 }
 
 async function checkAvailability(type, value, statusEl, inputEl) {
-  if (!value) {
-    statusEl.innerHTML = '';
-    inputEl.dataset.valid = "false";
-    inputEl.style.borderColor = "";
-    return;
-  }
-  statusEl.innerHTML = '🔄';
+  if (!value) return;
+  statusEl.innerHTML = '...';
   try {
     const res = await fetch(`/auth/check-availability?type=${type}&value=${encodeURIComponent(value)}`);
     const data = await res.json();
-    if (data.available) {
-      statusEl.innerHTML = '✅';
-      inputEl.dataset.valid = "true";
-      inputEl.style.borderColor = "var(--green)";
-    } else {
-      statusEl.innerHTML = '❌ Taken';
-      inputEl.dataset.valid = "false";
-      inputEl.style.borderColor = "var(--red)";
-    }
-  } catch(e) {
-    statusEl.innerHTML = '';
-  }
+    statusEl.innerHTML = data.available ? '✅' : '❌';
+    inputEl.style.borderColor = data.available ? "var(--green)" : "var(--red)";
+  } catch(e) {}
 }
 
 document.getElementById('reg-user').addEventListener('input', debounce(function(e) {
   checkAvailability('username', e.target.value, document.getElementById('user-status'), e.target);
 }, 400));
-
 document.getElementById('reg-email').addEventListener('input', debounce(function(e) {
   checkAvailability('email', e.target.value, document.getElementById('email-status'), e.target);
 }, 400));
-
 document.getElementById('reg-alias').addEventListener('input', debounce(function(e) {
   checkAvailability('alias', e.target.value, document.getElementById('alias-status'), e.target);
 }, 400));
-
-// Force validation on form submit
-document.getElementById('reg-form').addEventListener('submit', function(e) {
-  const user = document.getElementById('reg-user');
-  const alias = document.getElementById('reg-alias');
-  const pattern = /^[a-zA-Z0-9_]+$/;
-
-  if (!pattern.test(user.value)) {
-    e.preventDefault();
-    alert("Username can only contain letters, numbers, and underscores.");
-    user.focus();
-    return;
-  }
-
-  if (!pattern.test(alias.value)) {
-    e.preventDefault();
-    alert("Alias name can only contain letters, numbers, and underscores.");
-    alias.focus();
-    return;
-  }
-
-  if (!alias.value || alias.dataset.valid === "false") {
-    e.preventDefault();
-    alert("Please provide a unique alias name.");
-    alias.focus();
-  }
-});
-
 </script>
-{% endblock %}
+</body>
+</html>
