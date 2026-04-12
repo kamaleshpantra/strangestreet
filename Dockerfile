@@ -33,4 +33,4 @@ ENV PYTHONUNBUFFERED=1
 EXPOSE 10000
 
 # Run the application — Render sets $PORT automatically
-CMD gunicorn main:app -w 2 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:${PORT:-10000}
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
