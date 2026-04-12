@@ -44,6 +44,8 @@ async def lifespan(app: FastAPI):
         ("posts", "flag_reason VARCHAR(100)"),
         ("posts", "is_pinned BOOLEAN DEFAULT FALSE"),
         ("posts", "flair_id INTEGER"),
+        ("posts", "impression_count INTEGER DEFAULT 0"),
+        ("posts", "click_count INTEGER DEFAULT 0"),
         ("messages", "media_url VARCHAR(500)"),
         ("messages", "media_type VARCHAR(20)"),
         ("messages", "file_name VARCHAR(200)"),

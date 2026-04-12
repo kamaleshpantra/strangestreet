@@ -1,9 +1,9 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
-from database import get_db
+from database import get_db, SessionLocal
 from app.models import Post, User, Comment, FeedScore, Zone, ZoneMembership, Story, Reaction, ZoneScore, PeopleScore, PostFeature
 from app.auth import get_current_user
 from datetime import datetime, timezone
@@ -11,15 +11,37 @@ from datetime import datetime, timezone
 router = APIRouter(tags=["feed"])
 templates = Jinja2Templates(directory="app/templates")
 
+def log_feed_impressions(post_ids: list):
+    """Background task to bulk-update post impressions securely without UI latency"""
+    if not post_ids: return
+    db = SessionLocal()
+    try:
+        from sqlalchemy import update
+        db.execute(
+            update(Post).where(Post.id.in_(post_ids)).values(impression_count=Post.impression_count + 1)
+        )
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Failed to log impressions: {e}")
+    finally:
+        db.close()
+
+
 
 @router.get("/", response_class=HTMLResponse)
-def home(request: Request, db: Session = Depends(get_db)):
+def home(request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     user = get_current_user(request, db)
     if not user:
         return RedirectResponse("/auth/login", status_code=302)
 
     feed_posts = get_smart_feed(user, db)
     suggested  = get_suggested_users(user, db)
+
+    # Fast background logging to prevent UI latency
+    if feed_posts:
+        post_ids = [p.id for p in feed_posts]
+        background_tasks.add_task(log_feed_impressions, post_ids)
 
     # Story bar data
     now = datetime.now(timezone.utc)
@@ -101,7 +123,18 @@ def get_smart_feed(user: User, db: Session):
         )
         
         posts_by_id = {p.id: p for p in posts_query.all()}
-        return [posts_by_id[pid] for pid in safe_ids if pid in posts_by_id]
+        # Zip posts with their original ml_score for the Bandit blended formula
+        candidates_with_scores = [
+            (posts_by_id[s.post_id], s.score) 
+            for s in ml_scores 
+            if s.post_id in posts_by_id
+        ]
+        
+        # Apply Stage 3: UCB Bandit Real-Time Re-ranking
+        from app.services.bandit_service import rank_feed_with_bandit
+        ranked_posts = rank_feed_with_bandit(candidates_with_scores)
+        
+        return ranked_posts
 
     followed_ids = [u.id for u in user.following] + [user.id]
 

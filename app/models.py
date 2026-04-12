@@ -125,6 +125,8 @@ class Post(Base):
     flag_reason = Column(String(100), nullable=True)
     is_pinned   = Column(Boolean, default=False)
     flair_id    = Column(Integer, ForeignKey("zone_flairs.id", ondelete="SET NULL"), nullable=True)
+    impression_count = Column(Integer, default=0)
+    click_count = Column(Integer, default=0)
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
