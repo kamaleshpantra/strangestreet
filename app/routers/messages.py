@@ -6,6 +6,7 @@ from sqlalchemy import and_, or_, desc
 from database import get_db
 from app.models import User, Message, Connection, Reveal, Notification
 from app.auth import require_login
+from app.services.encryption_service import cipher
 import shutil, os, uuid
 
 router = APIRouter(prefix="/messages", tags=["messages"])
@@ -50,6 +51,9 @@ def inbox(request: Request, db: Session = Depends(get_db)):
         other_reveal = next((r for r in conn.reveals if r.user_id == other.id), None)
         my_reveal = next((r for r in conn.reveals if r.user_id == user.id), None)
 
+        if last_msg:
+            last_msg.content = cipher.decrypt(last_msg.content)
+
         alias_convos.append({
             "connection": conn,
             "other": other,
@@ -80,6 +84,8 @@ def inbox(request: Request, db: Session = Depends(get_db)):
                 Message.receiver_id == user.id,
                 Message.is_read == False,
             ).count()
+            if msg:
+                msg.content = cipher.decrypt(msg.content)
             public_convos[other_id] = {
                 "other": other_user,
                 "last_message": msg,
@@ -119,6 +125,9 @@ def alias_chat(connection_id: int, request: Request, db: Session = Depends(get_d
     messages = db.query(Message).filter(
         Message.connection_id == connection_id,
     ).order_by(Message.created_at).all()
+
+    for msg in messages:
+        msg.content = cipher.decrypt(msg.content)
 
     # Reveal info
     other_reveal = next((r for r in conn.reveals if r.user_id == other.id), None)
@@ -189,7 +198,7 @@ def send_alias_message(
 
     msg = Message(
         sender_id=user.id, receiver_id=other_id,
-        connection_id=connection_id, content=final_content,
+        connection_id=connection_id, content=cipher.encrypt(final_content),
         media_url=media_url, media_type=media_type, file_name=file_name
     )
     db.add(msg)
@@ -230,6 +239,9 @@ def public_chat(username: str, request: Request, db: Session = Depends(get_db)):
         ),
     ).order_by(Message.created_at).all()
 
+    for msg in messages:
+        msg.content = cipher.decrypt(msg.content)
+
     return templates.TemplateResponse("chat.html", {
         "request": request, "user": user, "other": other,
         "connection": None, "messages": messages,
@@ -258,7 +270,7 @@ def send_public_message(
 
     msg = Message(
         sender_id=user.id, receiver_id=other.id,
-        connection_id=None, content=final_content,
+        connection_id=None, content=cipher.encrypt(final_content),
         media_url=media_url, media_type=media_type, file_name=file_name
     )
     db.add(msg)
