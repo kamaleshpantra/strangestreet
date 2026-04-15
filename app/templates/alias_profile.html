@@ -12,10 +12,10 @@
 
     <div style="padding:0 24px 24px;position:relative;">
       <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:-30px;margin-bottom:16px;">
-        <div class="av {% if other_reveal_level >= 3 %}premium-av{% endif %}" style="width:72px;height:72px;font-size:28px;border:3px solid var(--bg2);background:linear-gradient(135deg,var(--red-dim),#1a0416);">
-          {% if other_reveal_level >= 3 and target.avatar_url %}
+        <div class="av {% if other_reveal_level >= 2 %}premium-av{% endif %}" style="width:72px;height:72px;font-size:28px;border:3px solid var(--bg2);background:linear-gradient(135deg,var(--red-dim),#1a0416);">
+          {% if other_reveal_level >= 2 and target.avatar_url %}
             <img src="{{ target.avatar_url }}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;"/>
-          {% elif other_reveal_level >= 2 %}
+          {% elif other_reveal_level >= 3 %}
             {{ target.display_name[:1] }}
           {% else %}
             {{ target.alias_name[:1] if target.alias_name else '?' }}
@@ -38,7 +38,7 @@
       </div>
 
       <h1 style="font-family:var(--font-h);font-size:22px;font-weight:700;letter-spacing:-0.3px;">
-        {% if other_reveal_level >= 2 %}
+        {% if other_reveal_level >= 3 %}
           {{ target.display_name }} <span style="font-size:14px;color:var(--text3);font-weight:400;">(@{{ target.username }})</span>
         {% else %}
           {{ target.alias_name }}
@@ -78,24 +78,24 @@
           {% if my_reveal_level >= 1 %}✓ Bio Revealed{% else %}Reveal My Bio{% endif %}
         </div>
 
-        <!-- Username -->
-        {% set can_reveal_username = (my_reveal_level == 1 and other_reveal_level >= 1) %}
-        {% set waiting_username = (my_reveal_level == 1 and other_reveal_level == 0) %}
-        <div class="reveal-step {% if my_reveal_level >= 2 %}done{% elif can_reveal_username %}next{% elif waiting_username %}waiting{% else %}locked{% endif %}"
-             {% if can_reveal_username %}onclick="revealNext({{ connection.id }})"{% endif %}>
-          {% if my_reveal_level >= 2 %}✓ Name Revealed
-          {% elif waiting_username %}⏳ Wait For Other
-          {% else %}Reveal Name{% endif %}
+        <!-- Photo -->
+        {% set can_reveal_photo = (my_reveal_level == 1 and other_reveal_level >= 1) %}
+        {% set waiting_photo = (my_reveal_level == 1 and other_reveal_level == 0) %}
+        <div class="reveal-step {% if my_reveal_level >= 2 %}done{% elif can_reveal_photo %}next{% elif waiting_photo %}waiting{% else %}locked{% endif %}"
+             {% if can_reveal_photo %}onclick="revealNext({{ connection.id }})"{% endif %}>
+          {% if my_reveal_level >= 2 %}✓ Photo Revealed
+          {% elif waiting_photo %}⏳ Wait For Other
+          {% else %}Reveal My Photo{% endif %}
         </div>
 
-        <!-- Photo -->
-        {% set can_reveal_photo = (my_reveal_level == 2 and other_reveal_level >= 2) %}
-        {% set waiting_photo = (my_reveal_level == 2 and other_reveal_level < 2) %}
-        <div class="reveal-step {% if my_reveal_level >= 3 %}done{% elif can_reveal_photo %}next{% elif waiting_photo %}waiting{% else %}locked{% endif %}"
-             {% if can_reveal_photo %}onclick="revealNext({{ connection.id }})"{% endif %}>
-          {% if my_reveal_level >= 3 %}✓ Photo Revealed
-          {% elif waiting_photo %}⏳ Wait For Other
-          {% else %}Reveal Photo{% endif %}
+        <!-- Username -->
+        {% set can_reveal_username = (my_reveal_level == 2 and other_reveal_level >= 2) %}
+        {% set waiting_username = (my_reveal_level == 2 and other_reveal_level < 2) %}
+        <div class="reveal-step {% if my_reveal_level >= 3 %}done{% elif can_reveal_username %}next{% elif waiting_username %}waiting{% else %}locked{% endif %}"
+             {% if can_reveal_username %}onclick="revealNext({{ connection.id }})"{% endif %}>
+          {% if my_reveal_level >= 3 %}✓ Name Revealed
+          {% elif waiting_username %}⏳ Wait For Other
+          {% else %}Reveal My Name{% endif %}
         </div>
       </div>
       <style>

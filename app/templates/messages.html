@@ -15,7 +15,7 @@
       {% for c in alias_convos %}
       <a href="/messages/c/{{ c.connection.id }}" class="card card-p" style="margin-bottom:8px;display:flex;align-items:center;gap:14px;padding:14px;{% if c.unread %}border-left:3px solid var(--red);{% endif %}">
         <div class="av" style="width:44px;height:44px;font-size:16px;background:linear-gradient(135deg,var(--red-dim),var(--bg3));">
-          {% if c.other_reveal_level >= 3 and c.other.avatar_url %}
+          {% if c.other_reveal_level >= 2 and c.other.avatar_url %}
             <img src="{{ c.other.avatar_url }}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;"/>
           {% else %}
             {{ c.other.alias_name[:1] if c.other.alias_name else '?' }}
@@ -24,7 +24,7 @@
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-family:var(--font-h);font-size:14px;font-weight:600;">
-              {% if c.other_reveal_level >= 2 %}{{ c.other.display_name }}{% else %}{{ c.other.alias_name or 'Unknown' }}{% endif %}
+              {% if c.other_reveal_level >= 3 %}{{ c.other.display_name }}{% else %}{{ c.other.alias_name or 'Unknown' }}{% endif %}
             </span>
             {% if c.unread %}<span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;"></span>{% endif %}
           </div>

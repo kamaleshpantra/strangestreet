@@ -69,9 +69,9 @@
       {% for data in active %}
       <div class="card card-p" style="margin-bottom:10px;display:flex;align-items:center;gap:14px;">
         <div class="av" style="width:48px;height:48px;font-size:18px;background:linear-gradient(135deg,var(--green),#047857) !important;border-color:rgba(34,197,94,0.3) !important;color:#fff !important;">
-          {% if data.other_reveal_level >= 3 and data.other.avatar_url %}
+          {% if data.other_reveal_level >= 2 and data.other.avatar_url %}
             <img src="{{ data.other.avatar_url }}" style="width:48px;height:48px;border-radius:50%;object-fit:cover;"/>
-          {% elif data.other_reveal_level >= 2 %}
+          {% elif data.other_reveal_level >= 3 %}
             {{ data.other.display_name[:1] }}
           {% else %}
             {{ data.other.alias_name[:1] if data.other.alias_name else '?' }}
@@ -79,7 +79,7 @@
         </div>
         <div style="flex:1;min-width:0;">
           <div style="font-family:var(--font-h);font-size:14px;font-weight:600;">
-            {% if data.other_reveal_level >= 2 %}
+            {% if data.other_reveal_level >= 3 %}
               {{ data.other.display_name }} <span style="font-size:11px;color:var(--text3);">(@{{ data.other.username }})</span>
             {% else %}
               {{ data.other.alias_name or 'Unknown' }}
@@ -92,8 +92,8 @@
           {% endif %}
           <div style="display:flex;gap:4px;margin-top:4px;">
             <span class="flair {% if data.other_reveal_level >= 1 %}green{% else %}neutral{% endif %}" style="font-size:9px;">Bio</span>
-            <span class="flair {% if data.other_reveal_level >= 2 %}green{% else %}neutral{% endif %}" style="font-size:9px;">Name</span>
-            <span class="flair {% if data.other_reveal_level >= 3 %}green{% else %}neutral{% endif %}" style="font-size:9px;">Photo</span>
+            <span class="flair {% if data.other_reveal_level >= 2 %}green{% else %}neutral{% endif %}" style="font-size:9px;">Photo</span>
+            <span class="flair {% if data.other_reveal_level >= 3 %}green{% else %}neutral{% endif %}" style="font-size:9px;">Name</span>
           </div>
         </div>
         <a href="/messages/c/{{ data.connection.id }}" class="btn-primary" style="font-size:12px;padding:6px 14px;">💬 Chat</a>

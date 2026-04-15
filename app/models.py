@@ -225,7 +225,7 @@ class Reveal(Base):
     id            = Column(Integer, primary_key=True, index=True)
     connection_id = Column(Integer, ForeignKey("connections.id"), nullable=False)
     user_id       = Column(Integer, ForeignKey("users.id"), nullable=False)
-    level         = Column(Integer, default=0)  # 0=alias, 1=public bio, 2=username, 3=profile pic
+    level         = Column(Integer, default=0)  # 0=alias, 1=bio, 2=photo, 3=username
     created_at    = Column(DateTime(timezone=True), server_default=func.now())
 
     connection = relationship("Connection", back_populates="reveals")

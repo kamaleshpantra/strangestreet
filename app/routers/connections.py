@@ -177,17 +177,23 @@ def reveal_info(connection_id: int, request: Request, db: Session = Depends(get_
     if reveal.level == 1 and other_level < 1:
         return JSONResponse({"error": "Waiting for other person to reveal bio", "level": 1}, status_code=400)
     if reveal.level == 2 and other_level < 2:
-        return JSONResponse({"error": "Waiting for other person to reveal username", "level": 2}, status_code=400)
+        return JSONResponse({"error": "Waiting for other person to reveal profile photo", "level": 2}, status_code=400)
 
     reveal.level += 1
 
     # Notify the other person
     other_id = conn.requested_id if conn.requester_id == user.id else conn.requester_id
-    level_labels = {1: "their bio", 2: "their username", 3: "their profile photo"}
+    level_labels = {1: "their bio", 2: "their profile photo", 3: "their username"}
+    
+    if reveal.level == 3:
+        msg = f"{user.username} (Alias: {user.alias_name}) revealed their identity to you!"
+    else:
+        msg = f"Someone revealed {level_labels.get(reveal.level, 'info')} to you!"
+
     db.add(Notification(
         user_id=other_id, actor_id=user.id,
         type="reveal", reference_id=conn.id, reference_type="connection",
-        message=f"Someone revealed {level_labels.get(reveal.level, 'info')} to you!",
+        message=msg,
     ))
 
     db.commit()
