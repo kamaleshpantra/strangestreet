@@ -6,14 +6,13 @@ from sqlalchemy import desc
 from database import get_db
 from app.models import Story, StoryView, User
 from app.auth import require_login
+from app.constants import UPLOAD_DIR_STORIES as STORY_DIR, ALLOWED_VIDEO_EXT as VIDEO_EXT
 from datetime import datetime, timedelta, timezone
 import shutil, os, uuid
 
 router = APIRouter(prefix="/stories", tags=["stories"])
 templates = Jinja2Templates(directory="app/templates")
 
-STORY_DIR = "app/static/uploads/stories"
-VIDEO_EXT = {".mp4", ".webm", ".ogg", ".mov"}
 ALLOWED = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".webm", ".ogg", ".mov"}
 
 

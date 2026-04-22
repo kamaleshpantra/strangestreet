@@ -23,6 +23,16 @@ services:
         generateValue: true
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: ENCRYPTION_KEY
+        generateValue: true
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "10"
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
 
   - type: cron
     name: strangestreet-ml-pipeline

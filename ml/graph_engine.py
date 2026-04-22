@@ -1,15 +1,4 @@
-"""
-Strange Street — Graph Engine
-==============================
-Builds social graphs and extracts structural features:
-  - PageRank (user influence)
-  - Louvain community detection (organic clusters)
-  - Friend-of-friend sets (2nd-degree connections)
-  - Label propagation (interest inference for sparse profiles)
 
-Usage:
-    python ml/graph_engine.py
-"""
 
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -29,8 +18,7 @@ class GraphEngine:
         self.db = db
         self.follower_graph = None
         self.connection_graph = None
-        self.user_features = {}  # uid → {pagerank, community_id, degree, fof_set}
-
+        self.user_features = {}  
     # ── Build Graphs ──────────────────────────────────────────────────────
 
     def build_follower_graph(self):
@@ -96,7 +84,7 @@ class GraphEngine:
     # ── Louvain Community Detection ───────────────────────────────────────
 
     def compute_communities(self) -> dict:
-        """Louvain clustering on undirected follower graph → community IDs."""
+
         if self.follower_graph is None:
             self.build_follower_graph()
 
@@ -127,7 +115,7 @@ class GraphEngine:
     # ── Friend-of-Friend ──────────────────────────────────────────────────
 
     def compute_fof_sets(self, max_fof: int = 50) -> dict:
-        """2nd-degree connections for each user."""
+
         if self.follower_graph is None:
             self.build_follower_graph()
 
@@ -158,10 +146,7 @@ class GraphEngine:
     # ── Label Propagation (Interest Inference) ────────────────────────────
 
     def infer_interests(self, min_interests: int = 3) -> dict:
-        """
-        For users with few interests, infer likely interests from their
-        neighbors' interest patterns using the follower graph.
-        """
+       
         if self.follower_graph is None:
             self.build_follower_graph()
 
@@ -215,7 +200,7 @@ class GraphEngine:
     # ── Aggregate ─────────────────────────────────────────────────────────
 
     def compute_all(self) -> dict:
-        """Run all graph computations and return per-user feature dicts."""
+
         self.build_follower_graph()
         self.build_connection_graph()
 
@@ -241,7 +226,7 @@ class GraphEngine:
 
 
 def run(db: Session = None):
-    """Run the graph engine and return features."""
+
     own_db = db is None
     if own_db:
         db = SessionLocal()
