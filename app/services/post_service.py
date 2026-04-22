@@ -1,17 +1,14 @@
 import os
 import uuid
 import shutil
+import html
 from sqlalchemy.orm import Session, joinedload
 from fastapi import UploadFile, HTTPException
 from app.models import Post, Comment, InteractionLog, Reaction, Bookmark, Poll, PollOption, PollVote, Notification, post_likes, PostFeature, ContentFlag
-
-UPLOAD_DIR = "app/static/uploads/posts"
-ALLOWED_EXT = {
-    ".jpg",".jpeg",".png",".gif",".webp",".avif",".bmp",".tiff",".svg",".ico",
-    ".mp4",".webm",".ogg",".mov",".avi",".mkv",".m4v",".3gp",".flv",".wmv",
-}
-VIDEO_EXT = {".mp4",".webm",".ogg",".mov",".avi",".mkv",".m4v",".3gp",".flv",".wmv"}
-ACTION_WEIGHTS = {"view":0.1,"like":1.0,"comment":2.0,"share":3.0,"skip":-0.5}
+from app.constants import (
+    UPLOAD_DIR_POSTS as UPLOAD_DIR, ALLOWED_POST_EXT as ALLOWED_EXT,
+    ALLOWED_VIDEO_EXT as VIDEO_EXT, ACTION_WEIGHTS,
+)
 
 def log_interaction(db: Session, user_id: int, post_id: int, action: str):
     db.add(InteractionLog(
@@ -65,7 +62,7 @@ class PostService:
                 media_type = "video" if is_video else "image"
 
         post = Post(
-            content=content,
+            content=html.escape(content.strip()) if content else "",
             category=category,
             user_id=user_id,
             image_url=media_url,
@@ -77,11 +74,11 @@ class PostService:
 
         # Create poll if provided
         if poll_question and len(poll_options) >= 2:
-            poll = Poll(post_id=post.id, question=poll_question)
+            poll = Poll(post_id=post.id, question=html.escape(poll_question.strip()))
             db.add(poll)
             db.flush()
             for opt_text in poll_options:
-                db.add(PollOption(poll_id=poll.id, text=opt_text))
+                db.add(PollOption(poll_id=poll.id, text=html.escape(opt_text.strip())))
 
         db.commit()
         db.refresh(post)

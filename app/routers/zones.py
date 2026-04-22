@@ -6,13 +6,11 @@ from sqlalchemy import desc, func as sqlfunc
 from database import get_db
 from app.models import User, Post, Zone, ZoneMembership, Notification, Comment, ZoneFlair, ZoneBan
 from app.auth import require_login, get_current_user
+from app.constants import UPLOAD_DIR_ZONES as ZONE_UPLOAD_DIR, ALLOWED_IMAGE_EXT as ALLOWED_IMAGE, ALLOWED_VIDEO_EXT as VIDEO_EXT
 import shutil, os, uuid, re
 
 router = APIRouter(prefix="/zones", tags=["zones"])
 templates = Jinja2Templates(directory="app/templates")
-
-ZONE_UPLOAD_DIR = "app/static/uploads/zones"
-ALLOWED_IMAGE = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".avif"}
 
 
 def slugify(text: str) -> str:
@@ -147,7 +145,15 @@ def zone_detail(slug: str, request: Request, db: Session = Depends(get_db)):
     if user:
         ban = db.query(ZoneBan).filter(ZoneBan.zone_id == zone.id, ZoneBan.user_id == user.id).first()
         if ban:
-            return HTMLResponse(f"<div style='padding:50px;text-align:center;'><h2>You have been banned from this Zone</h2><p>Reason: {ban.reason}</p></div>", status_code=403)
+            import html as html_mod
+            safe_reason = html_mod.escape(ban.reason or 'No reason provided')
+            return HTMLResponse(
+                f"<div style='padding:50px;text-align:center;font-family:Inter,sans-serif;color:#f8fafc;background:#050505;min-height:100vh;display:flex;align-items:center;justify-content:center;'>"
+                f"<div><h2 style='color:#e11d48;'>You have been banned from this Zone</h2>"
+                f"<p style='color:#94a3b8;margin-top:12px;'>Reason: {safe_reason}</p>"
+                f"<a href='/zones' style='color:#f43f5e;margin-top:20px;display:inline-block;'>Back to Zones</a></div></div>",
+                status_code=403,
+            )
             
         membership = db.query(ZoneMembership).filter(
             ZoneMembership.zone_id == zone.id,
@@ -258,7 +264,6 @@ async def create_zone_post(
     media_url = None
     media_type = None
     UPLOAD_DIR = "app/static/uploads/posts"
-    VIDEO_EXT = {".mp4", ".webm", ".ogg", ".mov", ".avi", ".mkv"}
 
     if media and media.filename:
         from app.utils import compress_image

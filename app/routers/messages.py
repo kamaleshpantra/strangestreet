@@ -7,18 +7,16 @@ from database import get_db
 from app.models import User, Message, Connection, Reveal, Notification
 from app.auth import require_login
 from app.services.encryption_service import cipher
+from app.constants import (
+    UPLOAD_DIR_MESSAGES as MSG_UPLOAD_DIR,
+    ALLOWED_MSG_EXT as ALLOWED_EXT,
+    ALLOWED_VIDEO_EXT as VIDEO_EXT,
+    ALLOWED_IMAGE_EXT as IMAGE_EXT,
+)
 import shutil, os, uuid
 
 router = APIRouter(prefix="/messages", tags=["messages"])
 templates = Jinja2Templates(directory="app/templates")
-
-MSG_UPLOAD_DIR = "app/static/uploads/messages"
-ALLOWED_EXT = {
-    ".jpg",".jpeg",".png",".gif",".webp",".avif",".bmp",".svg",
-    ".mp4",".webm",".mov",".pdf",".doc",".docx",".zip",".txt"
-}
-VIDEO_EXT = {".mp4",".webm",".mov"}
-IMAGE_EXT = {".jpg",".jpeg",".png",".gif",".webp",".avif",".bmp"}
 
 
 @router.get("", response_class=HTMLResponse)

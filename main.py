@@ -9,7 +9,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse, PlainTextResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 import traceback
 from contextlib import asynccontextmanager
 from database import engine, Base, SessionLocal
@@ -20,54 +20,19 @@ import app.models  # noqa
 
 from app.routers import auth, posts, users, feed, discover, connections, messages, zones, stories, notifications, admin, search, economy
 
-
 from app.logging_config import logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all database tables on startup
+    # Create all database tables on startup (safe for dev; use Alembic for production migrations)
     Base.metadata.create_all(bind=engine)
-    
-    # Auto-patch missing columns for Render
-    from sqlalchemy import text
-    patches = [
-        ("users", "is_simulated BOOLEAN DEFAULT FALSE"),
-        ("users", "is_verified BOOLEAN DEFAULT FALSE"),
-        ("users", "is_premium BOOLEAN DEFAULT FALSE"),
-        ("users", "street_coins INTEGER DEFAULT 0"),
-        ("users", "public_key TEXT"),
-        ("users", "alias_name VARCHAR(50)"),
-        ("users", "alias_bio TEXT"),
-        ("users", "alias_relationship_status VARCHAR(30)"),
-        ("posts", "zone_id INTEGER"),
-        ("posts", "is_flagged BOOLEAN DEFAULT FALSE"),
-        ("posts", "flag_reason VARCHAR(100)"),
-        ("posts", "is_pinned BOOLEAN DEFAULT FALSE"),
-        ("posts", "flair_id INTEGER"),
-        ("posts", "impression_count INTEGER DEFAULT 0"),
-        ("posts", "click_count INTEGER DEFAULT 0"),
-        ("messages", "media_url VARCHAR(500)"),
-        ("messages", "media_type VARCHAR(20)"),
-        ("messages", "file_name VARCHAR(200)"),
-        ("messages", "connection_id INTEGER"),
-        ("zones", "banner_url VARCHAR(500)"),
-        ("zones", "zone_type VARCHAR(20) DEFAULT 'public'"),
-        ("zones", "rules TEXT"),
-        ("comments", "parent_id INTEGER")
-    ]
-    for table, col in patches:
-        try:
-            with engine.connect() as conn:
-                conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {col}"))
-                conn.commit()
-        except Exception:
-            pass
-                
+
     logger.info("Database tables verified/created")
 
     # Ensure upload directories exist
     for d in ["app/static/uploads/posts", "app/static/uploads/avatars",
-              "app/static/uploads/zones", "app/static/uploads/stories"]:
+              "app/static/uploads/zones", "app/static/uploads/stories",
+              "app/static/uploads/messages"]:
         os.makedirs(d, exist_ok=True)
 
     # Seed interests
@@ -89,20 +54,43 @@ async def lifespan(app: FastAPI):
         from ml.scheduler import start_scheduler
         start_scheduler()
     except Exception as e:
-        print(f"Scheduler start skipped: {e}")
+        logger.warning(f"Scheduler start skipped: {e}")
 
-    print(f"{settings.APP_NAME} is running")
+    logger.info(f"{settings.APP_NAME} is running")
     yield
 
 app = FastAPI(
     title=settings.APP_NAME,
     lifespan=lifespan,
+    docs_url="/docs" if settings.DEBUG else None,
+    redoc_url=None,
+)
+
+# ── Middleware ─────────────────────────────────────────────────────────────────
+from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
+
+app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=120,
+    burst_paths={
+        "/auth/login": 10,      # 10 login attempts per minute
+        "/auth/register": 5,    # 5 registration attempts per minute
+        "/search": 30,          # 30 searches per minute
+    },
 )
 
 # Static files and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-# Routers
+# ── Health Check ──────────────────────────────────────────────────────────────
+@app.get("/health", tags=["system"])
+def health_check():
+    """Health check endpoint for Render/Docker monitoring."""
+    return JSONResponse({"status": "ok", "app": settings.APP_NAME})
+
+
+# ── Routers ───────────────────────────────────────────────────────────────────
 app.include_router(feed.router)
 app.include_router(auth.router)
 app.include_router(posts.router)
@@ -118,12 +106,57 @@ app.include_router(admin.router)
 app.include_router(economy.router)
 
 
+# ── Error Handlers ────────────────────────────────────────────────────────────
 @app.exception_handler(302)
 async def redirect_handler(request: Request, exc):
     return RedirectResponse(url=exc.headers["Location"])
 
+
+@app.exception_handler(404)
+async def not_found_handler(request: Request, exc):
+    """Return a user-friendly 404 page."""
+    return HTMLResponse(
+        content="""
+        <html><head><title>404 — Not Found</title>
+        <style>body{background:#050505;color:#f8fafc;font-family:'Inter',sans-serif;display:flex;
+        align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;}
+        .c{max-width:400px}.t{font-size:64px;font-weight:800;color:#e11d48;margin-bottom:8px}
+        .s{font-size:16px;color:#94a3b8;margin-bottom:24px}
+        a{color:#f43f5e;text-decoration:none;font-weight:600}a:hover{opacity:.8}</style></head>
+        <body><div class="c"><div class="t">404</div><div class="s">This street doesn't exist.</div>
+        <a href="/">← Back to Strange Street</a></div></body></html>
+        """,
+        status_code=404,
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
-    print("GLOBAL ERROR CAUGHT:", tb)
-    return PlainTextResponse(tb, status_code=500)
+    """
+    In production: return a generic error page (never expose internals).
+    In debug mode: return the full traceback for development.
+    """
+    if settings.DEBUG:
+        tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+        logger.error(f"Unhandled exception: {tb}")
+        return HTMLResponse(
+            content=f"<pre style='background:#111;color:#f87171;padding:20px;font-family:monospace;'>{tb}</pre>",
+            status_code=500,
+        )
+
+    # Production: log the error, show generic message
+    logger.error(f"Unhandled exception on {request.url.path}: {exc}", exc_info=True)
+    return HTMLResponse(
+        content="""
+        <html><head><title>500 — Server Error</title>
+        <style>body{background:#050505;color:#f8fafc;font-family:'Inter',sans-serif;display:flex;
+        align-items:center;justify-content:center;height:100vh;margin:0;text-align:center;}
+        .c{max-width:420px}.t{font-size:64px;font-weight:800;color:#e11d48;margin-bottom:8px}
+        .s{font-size:16px;color:#94a3b8;margin-bottom:24px}
+        a{color:#f43f5e;text-decoration:none;font-weight:600}a:hover{opacity:.8}</style></head>
+        <body><div class="c"><div class="t">500</div>
+        <div class="s">Something went wrong. We're on it.</div>
+        <a href="/">← Back to Strange Street</a></div></body></html>
+        """,
+        status_code=500,
+    )

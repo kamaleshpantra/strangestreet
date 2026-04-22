@@ -1,13 +1,11 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from database import get_db
 from config import settings
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from app.models import User
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -21,7 +19,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -47,7 +45,7 @@ def require_login(
     request: Request,
     db: Session = Depends(get_db),
 ) -> User:
-    """Like get_current_user but raises 401 if not logged in."""
+    """Like get_current_user but raises 302 redirect if not logged in."""
     user = get_current_user(request, db)
     if user is None:
         raise HTTPException(status_code=302, detail="Not authenticated",

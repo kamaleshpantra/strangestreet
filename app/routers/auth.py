@@ -8,6 +8,7 @@ from app.models import User, Interest
 from app.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.services.bloom_service import bloom_service
 from fastapi import Query
+from config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 templates = Jinja2Templates(directory="app/templates")
@@ -150,7 +151,7 @@ def register(
 
     token = create_access_token({"sub": user.username})
     response = RedirectResponse("/", status_code=302)
-    response.set_cookie("access_token", token, httponly=True, max_age=604800)
+    response.set_cookie("access_token", token, httponly=True, max_age=604800, secure=not settings.DEBUG, samesite="lax")
     return response
 
 
@@ -177,7 +178,7 @@ def login(
 
     token = create_access_token({"sub": user.username})
     response = RedirectResponse("/", status_code=302)
-    response.set_cookie("access_token", token, httponly=True, max_age=604800)
+    response.set_cookie("access_token", token, httponly=True, max_age=604800, secure=not settings.DEBUG, samesite="lax")
     return response
 
 

@@ -1,0 +1,38 @@
+# Git
+.git/
+.github/
+.gitignore
+
+# Python caches
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Environment & secrets
+.env
+.env.example
+
+# Databases
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Dev artifacts
+scratch/
+simulations/
+*.pptx
+start.bat
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Docs
+README.md
+
+# Uploads (re-created at runtime)
+app/static/uploads/

@@ -6,24 +6,14 @@ from sqlalchemy import desc
 from database import get_db
 from app.models import Post, Comment, InteractionLog, User, Reaction, Bookmark, Poll, PollOption, PollVote, Notification
 from app.auth import get_current_user, require_login
+from app.constants import (
+    UPLOAD_DIR_POSTS as UPLOAD_DIR, ALLOWED_POST_EXT as ALLOWED_EXT,
+    ALLOWED_VIDEO_EXT as VIDEO_EXT, CATEGORIES, ACTION_WEIGHTS, REACTION_EMOJIS,
+)
 import shutil, os, uuid
 
 router = APIRouter(prefix="/posts", tags=["posts"])
 templates = Jinja2Templates(directory="app/templates")
-
-UPLOAD_DIR = "app/static/uploads/posts"
-ALLOWED_EXT = {
-    ".jpg",".jpeg",".png",".gif",".webp",".avif",".bmp",".tiff",".svg",".ico",
-    ".mp4",".webm",".ogg",".mov",".avi",".mkv",".m4v",".3gp",".flv",".wmv",
-}
-VIDEO_EXT = {".mp4",".webm",".ogg",".mov",".avi",".mkv",".m4v",".3gp",".flv",".wmv"}
-CATEGORIES = ["general","technology","sports","news","science","gaming","food","travel","music","art"]
-ACTION_WEIGHTS = {"view":0.1,"like":1.0,"comment":2.0,"share":3.0,"skip":-0.5}
-
-REACTION_EMOJIS = {
-    "fire": "🔥", "love": "❤️", "laugh": "😂",
-    "mind_blown": "🤯", "clap": "👏", "dead": "💀",
-}
 
 
 def log_interaction(db, user_id, post_id, action):

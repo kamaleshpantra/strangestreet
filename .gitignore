@@ -25,18 +25,28 @@ env/
 Thumbs.db
 .DS_Store
 
+# Database files (NEVER commit databases)
+*.db
+*.sqlite3
+
 # Uploads (generated at runtime)
 app/static/uploads/posts/*
 app/static/uploads/avatars/*
 app/static/uploads/zones/*
 app/static/uploads/stories/*
+app/static/uploads/messages/*
 !app/static/uploads/posts/.gitkeep
 !app/static/uploads/avatars/.gitkeep
 !app/static/uploads/zones/.gitkeep
 !app/static/uploads/stories/.gitkeep
+!app/static/uploads/messages/.gitkeep
+
+# Dev artifacts
+scratch/
+simulations/
+*.pptx
 
 # ML/Simulation
-# ml is now needed for deploy
 simulation/
 
 # Test files

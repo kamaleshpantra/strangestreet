@@ -6,15 +6,13 @@ from sqlalchemy import desc, or_
 from database import get_db
 from app.models import User, Post, Interest, Notification, Bookmark, ZoneMembership
 from app.auth import get_current_user, require_login
+from app.constants import UPLOAD_DIR_AVATARS as AVATAR_DIR, ALLOWED_IMAGE_EXT as ALLOWED_IMAGE
 import shutil, os
 from fastapi import UploadFile, File
 import uuid
 
 router = APIRouter(prefix="/users", tags=["users"])
 templates = Jinja2Templates(directory="app/templates")
-
-AVATAR_DIR = "app/static/uploads/avatars"
-ALLOWED_IMAGE = {".jpg",".jpeg",".png",".gif",".webp",".avif",".bmp",".svg"}
 
 from pydantic import BaseModel
 
