@@ -41,34 +41,46 @@
 
   <!-- Reveal Bar (alias only) -->
   {% if is_alias %}
-  <div class="reveal-bar" style="border-radius:0;">
-    <!-- Bio -->
-    {% set can_reveal_bio = (my_reveal_level == 0) %}
-    <div class="reveal-step {% if my_reveal_level >= 1 %}done{% elif can_reveal_bio %}next{% endif %}"
-         {% if can_reveal_bio %}onclick="revealNext({{ connection.id }})"{% endif %}>
-      {% if my_reveal_level >= 1 %}✓ Bio{% else %}Reveal Bio{% endif %}
-    </div>
+    {% if my_reveal_level >= 3 and other_reveal_level >= 3 %}
+      <!-- Fully revealed: show follow option -->
+      <div class="reveal-bar" style="border-radius:0; grid-template-columns: 1fr;">
+         <div style="display:flex; align-items:center; justify-content:center; gap: 12px; padding: 10px;">
+           <span style="color:var(--green); font-size:13px; font-weight:600;">✓ Identity Fully Revealed</span>
+           <button class="btn-follow {% if is_following %}on{% endif %}" onclick="followUser('{{ other.username }}', this)">
+             {% if is_following %}Following{% else %}Follow @{{ other.username }}{% endif %}
+           </button>
+         </div>
+      </div>
+    {% else %}
+      <div class="reveal-bar" style="border-radius:0;">
+        <!-- Bio -->
+        {% set can_reveal_bio = (my_reveal_level == 0) %}
+        <div class="reveal-step {% if my_reveal_level >= 1 %}done{% elif can_reveal_bio %}next{% endif %}"
+             {% if can_reveal_bio %}onclick="revealNext({{ connection.id }})"{% endif %}>
+          {% if my_reveal_level >= 1 %}✓ Bio{% else %}Reveal Bio{% endif %}
+        </div>
 
-    <!-- Photo -->
-    {% set can_reveal_photo = (my_reveal_level == 1 and other_reveal_level >= 1) %}
-    {% set waiting_photo = (my_reveal_level == 1 and other_reveal_level == 0) %}
-    <div class="reveal-step {% if my_reveal_level >= 2 %}done{% elif can_reveal_photo %}next{% elif waiting_photo %}waiting{% else %}locked{% endif %}"
-         {% if can_reveal_photo %}onclick="revealNext({{ connection.id }})"{% endif %}>
-      {% if my_reveal_level >= 2 %}✓ Photo
-      {% elif waiting_photo %}⏳ Wait For Other
-      {% else %}Reveal Photo{% endif %}
-    </div>
+        <!-- Photo -->
+        {% set can_reveal_photo = (my_reveal_level == 1 and other_reveal_level >= 1) %}
+        {% set waiting_photo = (my_reveal_level == 1 and other_reveal_level == 0) %}
+        <div class="reveal-step {% if my_reveal_level >= 2 %}done{% elif can_reveal_photo %}next{% elif waiting_photo %}waiting{% else %}locked{% endif %}"
+             {% if can_reveal_photo %}onclick="revealNext({{ connection.id }})"{% endif %}>
+          {% if my_reveal_level >= 2 %}✓ Photo
+          {% elif waiting_photo %}⏳ Wait For Other
+          {% else %}Reveal Photo{% endif %}
+        </div>
 
-    <!-- Username -->
-    {% set can_reveal_username = (my_reveal_level == 2 and other_reveal_level >= 2) %}
-    {% set waiting_username = (my_reveal_level == 2 and other_reveal_level < 2) %}
-    <div class="reveal-step {% if my_reveal_level >= 3 %}done{% elif can_reveal_username %}next{% elif waiting_username %}waiting{% else %}locked{% endif %}"
-         {% if can_reveal_username %}onclick="revealNext({{ connection.id }})"{% endif %}>
-      {% if my_reveal_level >= 3 %}✓ Username
-      {% elif waiting_username %}⏳ Wait For Other
-      {% else %}Reveal Username{% endif %}
-    </div>
-  </div>
+        <!-- Username -->
+        {% set can_reveal_username = (my_reveal_level == 2 and other_reveal_level >= 2) %}
+        {% set waiting_username = (my_reveal_level == 2 and other_reveal_level < 2) %}
+        <div class="reveal-step {% if my_reveal_level >= 3 %}done{% elif can_reveal_username %}next{% elif waiting_username %}waiting{% else %}locked{% endif %}"
+             {% if can_reveal_username %}onclick="revealNext({{ connection.id }})"{% endif %}>
+          {% if my_reveal_level >= 3 %}✓ Username
+          {% elif waiting_username %}⏳ Wait For Other
+          {% else %}Reveal Username{% endif %}
+        </div>
+      </div>
+    {% endif %}
   {% endif %}
 
   <!-- Messages -->
@@ -145,6 +157,9 @@
 {% block scripts %}
 <script type="module">
   import { initChatScroll, initChatForm, initEmojiPicker, decryptChatFeed } from '/static/js/chat.js';
+  import { followUser } from '/static/js/feed.js';
+  
+  window.followUser = followUser;
   
   // Initialize UI Features
   initChatScroll();
