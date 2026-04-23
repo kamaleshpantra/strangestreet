@@ -34,7 +34,11 @@ class EncryptionService:
         try:
             return self.fernet.decrypt(token.encode()).decode()
         except Exception:
-            # Decryption failed - likely an old plain-text message
+            # Decryption failed
+            # If it looks like a Fernet token, hide the ugly string
+            if token.startswith("gAAAAAB"):
+                return "🔒 [Message encrypted with a lost key]"
+            # Otherwise it's likely an old plain-text legacy message
             return token
 
 # Global instance for easy use across routers
