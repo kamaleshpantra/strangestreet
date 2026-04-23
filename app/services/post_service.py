@@ -63,7 +63,7 @@ class PostService:
                 media_type = "video" if is_video else "image"
 
         post = Post(
-            content=html.escape(content.strip()) if content else "",
+            content=content.strip() if content else "",
             category=category,
             user_id=user_id,
             image_url=media_url,
@@ -75,11 +75,11 @@ class PostService:
 
         # Create poll if provided
         if poll_question and len(poll_options) >= 2:
-            poll = Poll(post_id=post.id, question=html.escape(poll_question.strip()))
+            poll = Poll(post_id=post.id, question=poll_question.strip())
             db.add(poll)
             db.flush()
             for opt_text in poll_options:
-                db.add(PollOption(poll_id=poll.id, text=html.escape(opt_text.strip())))
+                db.add(PollOption(poll_id=poll.id, text=opt_text.strip()))
 
         db.commit()
         db.refresh(post)

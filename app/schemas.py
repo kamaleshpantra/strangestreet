@@ -18,7 +18,7 @@ class PostCreate(BaseModel):
     @field_validator("content")
     @classmethod
     def sanitize_content(cls, v: str) -> str:
-        return html.escape(v.strip())
+        return v.strip()
 
     @field_validator("category")
     @classmethod
@@ -37,7 +37,7 @@ class CommentCreate(BaseModel):
     @field_validator("content")
     @classmethod
     def sanitize_content(cls, v: str) -> str:
-        return html.escape(v.strip())
+        return v.strip()
 
 
 class MessageCreate(BaseModel):
