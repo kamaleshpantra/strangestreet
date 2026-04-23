@@ -311,3 +311,22 @@ def delete_message(msg_id: int, request: Request, db: Session = Depends(get_db))
     db.delete(msg)
     db.commit()
     return JSONResponse({"success": True})
+
+
+@router.post("/public/{username}/delete_chat")
+def delete_public_chat(username: str, request: Request, db: Session = Depends(get_db)):
+    user = require_login(request, db)
+    other = db.query(User).filter(User.username == username).first()
+    if not other:
+        raise HTTPException(status_code=404)
+        
+    db.query(Message).filter(
+        Message.connection_id.is_(None),
+        or_(
+            and_(Message.sender_id == user.id, Message.receiver_id == other.id),
+            and_(Message.sender_id == other.id, Message.receiver_id == user.id),
+        ),
+    ).delete()
+    db.commit()
+    
+    return RedirectResponse("/messages", status_code=302)
