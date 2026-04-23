@@ -52,6 +52,7 @@ class PostService:
                     from app.utils import compress_image
                     fname = compress_image(media, UPLOAD_DIR, max_size=(1600, 1600))
                     if not fname:
+                        media.file.seek(0)
                         fname = f"{uuid.uuid4().hex}{ext}"
                         os.makedirs(UPLOAD_DIR, exist_ok=True)
                         fpath = os.path.join(UPLOAD_DIR, fname)

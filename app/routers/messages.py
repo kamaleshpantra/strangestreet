@@ -154,19 +154,30 @@ def handle_msg_upload(media: UploadFile):
     media_type = "video" if is_video else ("image" if is_image else "file")
     os.makedirs(MSG_UPLOAD_DIR, exist_ok=True)
     
+    media_url = None
+    
     if is_image:
         from app.utils import compress_image
         fname = compress_image(media, MSG_UPLOAD_DIR, prefix="msg_", max_size=(1600,1600))
         if not fname: # fallback
+            media.file.seek(0)
             fname = f"msg_{uuid.uuid4().hex}{ext}"
             with open(os.path.join(MSG_UPLOAD_DIR, fname), "wb") as f:
                 shutil.copyfileobj(media.file, f)
+            media_url = f"/static/uploads/messages/{fname}"
+            media_type = "file" # Fallback to file type if image processing failed
+        else:
+            if fname.startswith("http://") or fname.startswith("https://"):
+                media_url = fname
+            else:
+                media_url = f"/static/uploads/messages/{fname}"
     else:
         fname = f"msg_{uuid.uuid4().hex}{ext}"
         with open(os.path.join(MSG_UPLOAD_DIR, fname), "wb") as f:
             shutil.copyfileobj(media.file, f)
+        media_url = f"/static/uploads/messages/{fname}"
             
-    return f"/static/uploads/messages/{fname}", media_type, media.filename
+    return media_url, media_type, media.filename
 
 
 @router.post("/c/{connection_id}/send")
