@@ -3,11 +3,14 @@
 {% block content %}
 <div style="max-width:700px;margin:0 auto;">
   <div class="post" style="margin-bottom:16px;">
-    <div class="post-vote">
-      <button class="v-btn {% if liked %}up{% endif %}" onclick="likePost({{ post.id }},this)">
+    <div class="post-vote" style="display:flex; flex-direction:column; align-items:center; gap:4px; margin-right:12px; float:left;">
+      <button class="v-btn upvote {% if liked %}active{% endif %}" onclick="likePost({{ post.id }},this)" title="Upvote" style="padding:4px; color:var(--text3); border-radius:4px; transition:color 0.2s, background 0.2s;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
       </button>
-      <span class="v-count" id="lc">{{ like_count }}</span>
+      <span class="v-count" id="score-{{ post.id }}" style="font-size:12px; font-weight:700; color:var(--text);">{{ upvotes - downvotes }}</span>
+      <button class="v-btn downvote {% if disliked %}active{% endif %}" onclick="dislikePost({{ post.id }},this)" title="Downvote" style="padding:4px; color:var(--text3); border-radius:4px; transition:color 0.2s, background 0.2s;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      </button>
     </div>
     <div class="post-body" style="padding:16px;">
       <div class="post-meta" style="margin-bottom:10px;">
@@ -117,8 +120,51 @@
           </div>
           <div style="font-size:14px;color:var(--text2);line-height:1.6;padding-left:30px;">
             {{ c.content }}
-            <!-- Reply Action -->
-            <div style="margin-top:6px;">
+            <!-- Comment Actions: Upvote, Downvote, React, Reply -->
+            <div style="margin-top:8px; display:flex; align-items:center; gap:12px;">
+              {% set c_upvotes = c.liked_by|length %}
+              {% set c_downvotes = c.disliked_by|length if c.disliked_by else 0 %}
+              {% set c_liked = user and c.liked_by|selectattr('id', 'equalto', user.id)|list %}
+              {% set c_disliked = user and c.disliked_by and c.disliked_by|selectattr('id', 'equalto', user.id)|list %}
+              
+              <div style="display:flex; align-items:center; gap:4px; background:var(--bg3); border-radius:20px; padding:2px 6px;">
+                <button class="v-btn upvote {% if c_liked %}active{% endif %}" onclick="likeComment({{ post.id }}, {{ c.id }}, this)" style="padding:2px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                </button>
+                <span id="c-score-{{ c.id }}" style="font-size:11px; font-weight:600;">{{ c_upvotes - c_downvotes }}</span>
+                <button class="v-btn downvote {% if c_disliked %}active{% endif %}" onclick="dislikeComment({{ post.id }}, {{ c.id }}, this)" style="padding:2px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                </button>
+              </div>
+
+              <!-- Comment Reactions -->
+              {% if c.reactions %}
+                <div style="display:flex; gap:4px; align-items:center;">
+                  {% set c_reaction_map = {} %}
+                  {% for r in c.reactions %}
+                    {% set _ = c_reaction_map.__setitem__(r.type, c_reaction_map.get(r.type, 0) + 1) %}
+                  {% endfor %}
+                  {% for rtype, count in c_reaction_map.items() %}
+                    {% set c_user_reacted = user and c.reactions|selectattr('user_id', 'equalto', user.id)|selectattr('type', 'equalto', rtype)|list %}
+                    <button class="reaction-btn {% if c_user_reacted %}active{% endif %}" onclick="reactComment({{ post.id }}, {{ c.id }}, '{{ rtype }}')" style="padding:2px 6px; font-size:12px; background:var(--bg3); border-radius:12px; border:1px solid {% if c_user_reacted %}var(--red2){% else %}transparent{% endif %}; cursor:pointer;">
+                      {{ {'fire':'🔥','love':'❤️','laugh':'😂','mind_blown':'🤯','clap':'👏','dead':'💀'}.get(rtype, '🔥') }} {{ count }}
+                    </button>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <div class="reaction-picker-hover" style="position:relative;">
+                <button class="btn-ghost" style="font-size:12px; padding:2px 6px;" onclick="toggleCReactions({{ c.id }})">😀</button>
+                <div id="cr-{{ c.id }}" class="reaction-picker" style="display:none; position:absolute; bottom:100%; left:0; z-index:100; background:var(--bg2); padding:4px; border-radius:8px; border:1px solid var(--border); white-space:nowrap;">
+                  <button class="react-opt" onclick="reactComment({{ post.id }}, {{ c.id }}, 'fire')">🔥</button>
+                  <button class="react-opt" onclick="reactComment({{ post.id }}, {{ c.id }}, 'love')">❤️</button>
+                  <button class="react-opt" onclick="reactComment({{ post.id }}, {{ c.id }}, 'laugh')">😂</button>
+                  <button class="react-opt" onclick="reactComment({{ post.id }}, {{ c.id }}, 'mind_blown')">🤯</button>
+                  <button class="react-opt" onclick="reactComment({{ post.id }}, {{ c.id }}, 'clap')">👏</button>
+                  <button class="react-opt" onclick="reactComment({{ post.id }}, {{ c.id }}, 'dead')">💀</button>
+                </div>
+              </div>
+
               <button class="btn-ghost" style="font-size:11px;padding:2px 6px;" onclick="toggleReplyForm({{ c.id }})">↩ Reply</button>
             </div>
             <!-- Reply Form (Hidden) -->
@@ -148,21 +194,27 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-function toggleReplyForm(id) {
-  const f = document.getElementById('reply-form-'+id);
-  f.style.display = f.style.display === 'none' ? 'flex' : 'none';
-  if(f.style.display === 'flex') f.querySelector('input[name="content"]').focus();
-}
-async function likePost(id,btn){const r=await fetch(`/posts/${id}/like`,{method:'POST'});const d=await r.json();document.getElementById('lc').textContent=d.count;btn.classList.toggle('up',d.liked);}
-async function reactPost(id,type){const r=await fetch(`/posts/${id}/react/${type}`,{method:'POST'});location.reload();}
-async function bookmarkPost(id,btn){const r=await fetch(`/posts/${id}/bookmark`,{method:'POST'});const d=await r.json();btn.style.opacity=d.bookmarked?'1':'0.4';}
-async function votePoll(postId,optId){const r=await fetch(`/posts/${postId}/poll/${optId}/vote`,{method:'POST'});location.reload();}
-async function deletePost(id) {
-  if (!confirm('Are you sure?')) return;
-  const r = await fetch(`/posts/${id}/delete`, {method:'POST'});
-  if (r.ok) window.location.href = '/';
-  else alert('Delete failed');
-}
+<script type="module">
+  import { likePost, dislikePost, reactPost, bookmarkPost, votePoll, deletePost, likeComment, dislikeComment, reactComment } from '/static/js/feed.js';
+  window.likePost = likePost;
+  window.dislikePost = dislikePost;
+  window.reactPost = reactPost;
+  window.bookmarkPost = bookmarkPost;
+  window.votePoll = votePoll;
+  window.deletePost = deletePost;
+  window.likeComment = likeComment;
+  window.dislikeComment = dislikeComment;
+  window.reactComment = reactComment;
+  
+  window.toggleReplyForm = function(id) {
+    const f = document.getElementById('reply-form-'+id);
+    f.style.display = f.style.display === 'none' ? 'flex' : 'none';
+    if(f.style.display === 'flex') f.querySelector('input[name="content"]').focus();
+  }
+  
+  window.toggleCReactions = function(id) {
+    const r = document.getElementById('cr-'+id);
+    r.style.display = r.style.display === 'none' ? 'flex' : 'none';
+  }
 </script>
 {% endblock %}

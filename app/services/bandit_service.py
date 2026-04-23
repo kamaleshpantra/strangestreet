@@ -11,6 +11,7 @@ REWARD_CLICK = 0.2
 REWARD_LIKE = 1.0
 REWARD_REACTION = 1.5
 REWARD_COMMENT = 3.0
+REWARD_DISLIKE = -1.0
 
 def calculate_post_ucb(post: Post, ml_score: float, total_impressions: int) -> float:
     """
@@ -29,13 +30,15 @@ def calculate_post_ucb(post: Post, ml_score: float, total_impressions: int) -> f
     likes = len(post.liked_by) if post.liked_by else 0
     comments = len(post.comments) if post.comments else 0
     reactions = len(post.reactions) if post.reactions else 0
+    dislikes = len(post.disliked_by) if hasattr(post, 'disliked_by') and post.disliked_by else 0
     clicks = post.click_count or 0
     
     total_reward = (
         (clicks * REWARD_CLICK) +
         (likes * REWARD_LIKE) + 
         (reactions * REWARD_REACTION) + 
-        (comments * REWARD_COMMENT)
+        (comments * REWARD_COMMENT) +
+        (dislikes * REWARD_DISLIKE)
     )
     
     win_rate = total_reward / post.impression_count

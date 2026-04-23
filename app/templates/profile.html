@@ -97,7 +97,13 @@
   {% if posts %}
     {% for post in posts %}
     <div class="post" style="margin-bottom:10px;">
-      <div class="post-vote"><span class="v-count">{{ post.liked_by|length }}</span></div>
+      <div class="post-vote" style="display:flex; flex-direction:column; align-items:center; gap:4px; margin-right:12px; float:left;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14" style="color:var(--text3);"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <span class="v-count" style="font-size:12px; font-weight:700; color:var(--text);">
+          {% set downvotes = post.disliked_by|length if post.disliked_by else 0 %}
+          {{ post.liked_by|length - downvotes }}
+        </span>
+      </div>
       <div class="post-body">
         <div class="post-meta">
           <span class="post-time">{{ post.created_at.strftime('%B %d, %Y') if post.created_at else '' }}</span>

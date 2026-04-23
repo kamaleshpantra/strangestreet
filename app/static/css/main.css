@@ -415,11 +415,15 @@
 
     .v-btn:hover {
       background: var(--bg4);
+    }
+    .v-btn.upvote:hover { color: var(--red2); }
+    .v-btn.downvote:hover { color: #5c7cfa; }
+
+    .v-btn.upvote.active {
       color: var(--red2);
     }
-
-    .v-btn.up {
-      color: var(--red2);
+    .v-btn.downvote.active {
+      color: #5c7cfa;
     }
 
     .v-count {
