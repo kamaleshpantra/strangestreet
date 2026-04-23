@@ -24,7 +24,7 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.9
       - key: ENCRYPTION_KEY
-        generateValue: true
+        sync: false
       - key: MAX_UPLOAD_SIZE_MB
         value: "10"
       - key: CLOUDINARY_CLOUD_NAME
