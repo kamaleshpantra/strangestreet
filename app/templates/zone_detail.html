@@ -57,11 +57,16 @@
     {% if posts %}
       {% for post in posts %}
       <div class="post" style="margin-bottom:10px;" {% if post.is_pinned %}data-pinned="true"{% endif %}>
-        <div class="post-vote">
-          <button class="v-btn" onclick="likePost({{ post.id }},this)" title="Like">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+        <div class="post-vote" style="display:flex; flex-direction:column; align-items:center; gap:4px; margin-right:12px; float:left;">
+          <button class="v-btn upvote {% if user and post.liked_by|selectattr('id', 'equalto', user.id)|list %}active{% endif %}" onclick="likePost({{ post.id }},this)" title="Upvote" style="padding:4px; color:var(--text3); border-radius:4px; transition:color 0.2s, background 0.2s;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
           </button>
-          <span class="v-count" id="lc-{{ post.id }}">{{ post.liked_by|length }}</span>
+          {% set upvotes = post.liked_by|length %}
+          {% set downvotes = post.disliked_by|length if post.disliked_by else 0 %}
+          <span class="v-count" id="score-{{ post.id }}" style="font-size:12px; font-weight:700; color:var(--text);">{{ upvotes - downvotes }}</span>
+          <button class="v-btn downvote {% if user and post.disliked_by and post.disliked_by|selectattr('id', 'equalto', user.id)|list %}active{% endif %}" onclick="dislikePost({{ post.id }},this)" title="Downvote" style="padding:4px; color:var(--text3); border-radius:4px; transition:color 0.2s, background 0.2s;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          </button>
         </div>
         <div class="post-body">
           <div class="post-meta">

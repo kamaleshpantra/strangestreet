@@ -5,12 +5,28 @@ export async function likePost(id, btn) {
     const r = await fetch(`/posts/${id}/like`, { method: 'POST' });
     if(r.ok) {
       const d = await r.json();
-      document.getElementById('lc-' + id).textContent = d.count;
-      btn.classList.toggle('up', d.liked);
+      document.getElementById('score-' + id).textContent = d.upvotes - d.downvotes;
+      btn.classList.toggle('active');
+      const downBtn = btn.parentElement.querySelector('.downvote');
+      if (downBtn) downBtn.classList.remove('active');
     }
   } catch(e) { console.error('Like failed:', e); }
 }
 window.likePost = likePost;
+
+export async function dislikePost(id, btn) {
+  try {
+    const r = await fetch(`/posts/${id}/dislike`, { method: 'POST' });
+    if(r.ok) {
+      const d = await r.json();
+      document.getElementById('score-' + id).textContent = d.upvotes - d.downvotes;
+      btn.classList.toggle('active');
+      const upBtn = btn.parentElement.querySelector('.upvote');
+      if (upBtn) upBtn.classList.remove('active');
+    }
+  } catch(e) { console.error('Dislike failed:', e); }
+}
+window.dislikePost = dislikePost;
 
 export async function followUser(u, btn) {
   try {
@@ -42,6 +58,42 @@ export async function reactPost(id, type) {
   } catch(e) { console.error('React failed:', e); }
 }
 window.reactPost = reactPost;
+
+export async function likeComment(postId, commentId, btn) {
+  try {
+    const r = await fetch(`/posts/${postId}/comment/${commentId}/like`, { method: 'POST' });
+    if(r.ok) {
+      const d = await r.json();
+      document.getElementById('c-score-' + commentId).textContent = d.upvotes - d.downvotes;
+      btn.classList.toggle('active');
+      const downBtn = btn.parentElement.querySelector('.downvote');
+      if (downBtn) downBtn.classList.remove('active');
+    }
+  } catch(e) { console.error('Like failed:', e); }
+}
+window.likeComment = likeComment;
+
+export async function dislikeComment(postId, commentId, btn) {
+  try {
+    const r = await fetch(`/posts/${postId}/comment/${commentId}/dislike`, { method: 'POST' });
+    if(r.ok) {
+      const d = await r.json();
+      document.getElementById('c-score-' + commentId).textContent = d.upvotes - d.downvotes;
+      btn.classList.toggle('active');
+      const upBtn = btn.parentElement.querySelector('.upvote');
+      if (upBtn) upBtn.classList.remove('active');
+    }
+  } catch(e) { console.error('Dislike failed:', e); }
+}
+window.dislikeComment = dislikeComment;
+
+export async function reactComment(postId, commentId, type) {
+  try {
+    const r = await fetch(`/posts/${postId}/comment/${commentId}/react/${type}`, { method: 'POST' });
+    if(r.ok) location.reload();
+  } catch(e) { console.error('React failed:', e); }
+}
+window.reactComment = reactComment;
 
 export async function bookmarkPost(id, btn) {
   try {

@@ -4,7 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from database import get_db
-from app.models import Post, Comment, InteractionLog, User, Reaction, Bookmark, Poll, PollOption, PollVote, Notification
+from app.models import Post, Comment, InteractionLog, User, Reaction, Bookmark, Poll, PollOption, PollVote, Notification, CommentReaction
 from app.auth import get_current_user, require_login
 from app.constants import (
     UPLOAD_DIR_POSTS as UPLOAD_DIR, ALLOWED_POST_EXT as ALLOWED_EXT,
@@ -76,6 +76,7 @@ def view_post(post_id: int, request: Request, db: Session = Depends(get_db)):
         joinedload(Post.author),
         joinedload(Post.comments).joinedload(Comment.author),
         joinedload(Post.liked_by),
+        joinedload(Post.disliked_by),
         joinedload(Post.reactions),
         joinedload(Post.poll),
         joinedload(Post.zone),
@@ -88,6 +89,7 @@ def view_post(post_id: int, request: Request, db: Session = Depends(get_db)):
 
     log_interaction(db, user.id, post.id, "view")
     liked = any(u.id == user.id for u in post.liked_by)
+    disliked = any(u.id == user.id for u in post.disliked_by) if hasattr(post, 'disliked_by') else False
     bookmarked = any(b.user_id == user.id for b in post.bookmarks)
     user_reaction = next((r for r in post.reactions if r.user_id == user.id), None)
 
@@ -116,7 +118,9 @@ def view_post(post_id: int, request: Request, db: Session = Depends(get_db)):
 
     return templates.TemplateResponse("post_detail.html", {
         "request": request, "user": user, "post": post,
-        "liked": liked, "like_count": len(post.liked_by),
+        "liked": liked, "disliked": disliked,
+        "upvotes": len(post.liked_by),
+        "downvotes": len(post.disliked_by) if hasattr(post, 'disliked_by') else 0,
         "bookmarked": bookmarked,
         "user_reaction": user_reaction,
         "reaction_counts": reaction_counts,
@@ -131,20 +135,42 @@ def like_post(post_id: int, request: Request, db: Session = Depends(get_db)):
     post = db.query(Post).filter(Post.id == post_id).first()
     if not post:
         raise HTTPException(status_code=404)
-    already = any(u.id == user.id for u in post.liked_by)
-    if already:
+    already_liked = any(u.id == user.id for u in post.liked_by)
+    already_disliked = any(u.id == user.id for u in post.disliked_by)
+    if already_liked:
         post.liked_by.remove(user)
     else:
+        if already_disliked:
+            post.disliked_by.remove(user)
         post.liked_by.append(user)
         log_interaction(db, user.id, post.id, "like")
         if post.user_id != user.id:
             db.add(Notification(
                 user_id=post.user_id, actor_id=user.id,
                 type="like", reference_id=post.id, reference_type="post",
-                message=f"{user.display_name} liked your post",
+                message=f"{user.display_name} upvoted your post",
             ))
     db.commit()
-    return JSONResponse({"liked": not already, "count": len(post.liked_by)})
+    return JSONResponse({"upvotes": len(post.liked_by), "downvotes": len(post.disliked_by)})
+
+
+@router.post("/{post_id}/dislike")
+def dislike_post(post_id: int, request: Request, db: Session = Depends(get_db)):
+    user = require_login(request, db)
+    post = db.query(Post).filter(Post.id == post_id).first()
+    if not post:
+        raise HTTPException(status_code=404)
+    already_liked = any(u.id == user.id for u in post.liked_by)
+    already_disliked = any(u.id == user.id for u in post.disliked_by)
+    if already_disliked:
+        post.disliked_by.remove(user)
+    else:
+        if already_liked:
+            post.liked_by.remove(user)
+        post.disliked_by.append(user)
+        log_interaction(db, user.id, post.id, "dislike")
+    db.commit()
+    return JSONResponse({"upvotes": len(post.liked_by), "downvotes": len(post.disliked_by)})
 
 
 @router.post("/{post_id}/react/{reaction_type}")
@@ -267,4 +293,89 @@ def delete_post(post_id: int, request: Request, db: Session = Depends(get_db)):
         
     return JSONResponse({"success": True})
 
+
+@router.post("/{post_id}/comment/{comment_id}/like")
+def like_comment(post_id: int, comment_id: int, request: Request, db: Session = Depends(get_db)):
+    user = require_login(request, db)
+    comment = db.query(Comment).filter(Comment.id == comment_id, Comment.post_id == post_id).first()
+    if not comment:
+        raise HTTPException(status_code=404)
+        
+    already_liked = any(u.id == user.id for u in comment.liked_by)
+    already_disliked = any(u.id == user.id for u in comment.disliked_by)
+    
+    if already_liked:
+        comment.liked_by.remove(user)
+    else:
+        if already_disliked:
+            comment.disliked_by.remove(user)
+        comment.liked_by.append(user)
+        if comment.user_id != user.id:
+            db.add(Notification(
+                user_id=comment.user_id, actor_id=user.id,
+                type="like", reference_id=comment.post_id, reference_type="post",
+                message=f"{user.display_name} upvoted your comment",
+            ))
+    db.commit()
+    return JSONResponse({"upvotes": len(comment.liked_by), "downvotes": len(comment.disliked_by)})
+
+
+@router.post("/{post_id}/comment/{comment_id}/dislike")
+def dislike_comment(post_id: int, comment_id: int, request: Request, db: Session = Depends(get_db)):
+    user = require_login(request, db)
+    comment = db.query(Comment).filter(Comment.id == comment_id, Comment.post_id == post_id).first()
+    if not comment:
+        raise HTTPException(status_code=404)
+        
+    already_liked = any(u.id == user.id for u in comment.liked_by)
+    already_disliked = any(u.id == user.id for u in comment.disliked_by)
+    
+    if already_disliked:
+        comment.disliked_by.remove(user)
+    else:
+        if already_liked:
+            comment.liked_by.remove(user)
+        comment.disliked_by.append(user)
+    db.commit()
+    return JSONResponse({"upvotes": len(comment.liked_by), "downvotes": len(comment.disliked_by)})
+
+
+@router.post("/{post_id}/comment/{comment_id}/react/{reaction_type}")
+def react_to_comment(post_id: int, comment_id: int, reaction_type: str, request: Request, db: Session = Depends(get_db)):
+    user = require_login(request, db)
+    if reaction_type not in REACTION_EMOJIS:
+        raise HTTPException(status_code=400)
+
+    comment = db.query(Comment).filter(Comment.id == comment_id, Comment.post_id == post_id).first()
+    if not comment:
+        raise HTTPException(status_code=404)
+
+    existing = db.query(CommentReaction).filter(
+        CommentReaction.user_id == user.id, CommentReaction.comment_id == comment_id
+    ).first()
+
+    if existing:
+        if existing.type == reaction_type:
+            db.delete(existing)
+            db.commit()
+            counts = {}
+            for r in db.query(CommentReaction).filter(CommentReaction.comment_id == comment_id).all():
+                counts[r.type] = counts.get(r.type, 0) + 1
+            return JSONResponse({"removed": True, "type": reaction_type, "counts": counts})
+        else:
+            existing.type = reaction_type
+    else:
+        db.add(CommentReaction(user_id=user.id, comment_id=comment_id, type=reaction_type))
+        if comment.user_id != user.id:
+            db.add(Notification(
+                user_id=comment.user_id, actor_id=user.id,
+                type="reaction", reference_id=comment.post_id, reference_type="post",
+                message=f"{user.display_name} reacted {REACTION_EMOJIS[reaction_type]} to your comment",
+            ))
+
+    db.commit()
+    counts = {}
+    for r in db.query(CommentReaction).filter(CommentReaction.comment_id == comment_id).all():
+        counts[r.type] = counts.get(r.type, 0) + 1
+    return JSONResponse({"removed": False, "type": reaction_type, "counts": counts})
 

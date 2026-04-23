@@ -41,6 +41,7 @@ CATEGORIES = [
 ACTION_WEIGHTS = {
     "view": 0.1,
     "like": 1.0,
+    "dislike": -1.0,
     "comment": 2.0,
     "share": 3.0,
     "skip": -0.5,

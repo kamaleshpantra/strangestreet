@@ -25,6 +25,27 @@ post_likes = Table(
     Column("post_id",  Integer, ForeignKey("posts.id"),  primary_key=True, index=True),
 )
 
+post_dislikes = Table(
+    "post_dislikes",
+    Base.metadata,
+    Column("user_id",  Integer, ForeignKey("users.id"),  primary_key=True, index=True),
+    Column("post_id",  Integer, ForeignKey("posts.id"),  primary_key=True, index=True),
+)
+
+comment_likes = Table(
+    "comment_likes",
+    Base.metadata,
+    Column("user_id",  Integer, ForeignKey("users.id"),  primary_key=True, index=True),
+    Column("comment_id", Integer, ForeignKey("comments.id"), primary_key=True, index=True),
+)
+
+comment_dislikes = Table(
+    "comment_dislikes",
+    Base.metadata,
+    Column("user_id",  Integer, ForeignKey("users.id"),  primary_key=True, index=True),
+    Column("comment_id", Integer, ForeignKey("comments.id"), primary_key=True, index=True),
+)
+
 user_interests = Table(
     "user_interests",
     Base.metadata,
@@ -84,6 +105,9 @@ class User(Base):
     )
 
     liked_posts = relationship("Post", secondary=post_likes, back_populates="liked_by")
+    disliked_posts = relationship("Post", secondary=post_dislikes, back_populates="disliked_by")
+    liked_comments = relationship("Comment", secondary=comment_likes, back_populates="liked_by")
+    disliked_comments = relationship("Comment", secondary=comment_dislikes, back_populates="disliked_by")
     interests   = relationship("Interest", secondary=user_interests, back_populates="users")
 
     # Connections
@@ -105,6 +129,7 @@ class User(Base):
 
     # Reactions
     reactions = relationship("Reaction", back_populates="user", cascade="all, delete")
+    comment_reactions = relationship("CommentReaction", back_populates="user", cascade="all, delete")
 
     # Zone memberships
     zone_memberships = relationship("ZoneMembership", back_populates="user", cascade="all, delete")
@@ -133,6 +158,7 @@ class Post(Base):
     author    = relationship("User",    back_populates="posts")
     comments  = relationship("Comment", back_populates="post", cascade="all, delete")
     liked_by  = relationship("User",    secondary=post_likes,  back_populates="liked_posts")
+    disliked_by = relationship("User",  secondary=post_dislikes, back_populates="disliked_posts")
     reactions = relationship("Reaction", back_populates="post", cascade="all, delete")
     bookmarks = relationship("Bookmark", back_populates="post", cascade="all, delete")
     zone      = relationship("Zone",    back_populates="posts")
@@ -153,6 +179,9 @@ class Comment(Base):
 
     author = relationship("User", back_populates="comments")
     post   = relationship("Post", back_populates="comments")
+    liked_by = relationship("User", secondary=comment_likes, back_populates="liked_comments")
+    disliked_by = relationship("User", secondary=comment_dislikes, back_populates="disliked_comments")
+    reactions = relationship("CommentReaction", back_populates="comment", cascade="all, delete")
     
     replies = relationship("Comment", back_populates="parent", cascade="all, delete", foreign_keys=[parent_id])
     parent  = relationship("Comment", back_populates="replies", remote_side=[id], foreign_keys=[parent_id])
@@ -364,6 +393,20 @@ class Reaction(Base):
 
     user = relationship("User", back_populates="reactions")
     post = relationship("Post", back_populates="reactions")
+
+
+# ── Comment Reaction ─────────────────────────────────────────────────────────
+class CommentReaction(Base):
+    __tablename__ = "comment_reactions"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey("users.id"), nullable=False)
+    comment_id = Column(Integer, ForeignKey("comments.id"), nullable=False)
+    type       = Column(String(20), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user    = relationship("User", back_populates="comment_reactions")
+    comment = relationship("Comment", back_populates="reactions")
 
 
 # ── Poll ─────────────────────────────────────────────────────────────────────
