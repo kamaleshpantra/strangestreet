@@ -1125,6 +1125,8 @@
       font-size: 14px;
       line-height: 1.5;
       animation: fadeUp 0.15s ease;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .msg-bubble.sent {
