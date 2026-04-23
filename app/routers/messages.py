@@ -131,12 +131,15 @@ def alias_chat(connection_id: int, request: Request, db: Session = Depends(get_d
     other_reveal = next((r for r in conn.reveals if r.user_id == other.id), None)
     my_reveal = next((r for r in conn.reveals if r.user_id == user.id), None)
 
+    is_following = any(u.id == other.id for u in user.following)
+
     return templates.TemplateResponse("chat.html", {
         "request": request, "user": user, "other": other,
         "connection": conn, "messages": messages,
         "other_reveal_level": other_reveal.level if other_reveal else 0,
         "my_reveal_level": my_reveal.level if my_reveal else 0,
         "is_alias": True,
+        "is_following": is_following,
     })
 
 
@@ -251,11 +254,14 @@ def public_chat(username: str, request: Request, db: Session = Depends(get_db)):
     for msg in messages:
         msg.content = cipher.decrypt(msg.content)
 
+    is_following = any(u.id == other.id for u in user.following)
+
     return templates.TemplateResponse("chat.html", {
         "request": request, "user": user, "other": other,
         "connection": None, "messages": messages,
         "other_reveal_level": 3, "my_reveal_level": 3,
         "is_alias": False,
+        "is_following": is_following,
     })
 
 
