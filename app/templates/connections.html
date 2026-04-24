@@ -52,7 +52,7 @@
             {{ conn.requested.alias_name or 'Unknown' }}
           </a>
           <div style="font-size:11px;color:var(--text3);margin-top:2px;">
-            Sent {{ conn.created_at.strftime('%b %d, %Y') if conn.created_at else '' }}
+            Sent {% if conn.created_at %}<span class="local-time" data-timestamp="{{ conn.created_at.isoformat() }}" data-format="%b %d, %Y"></span>{% else %}{% endif %}
           </div>
         </div>
         <span class="flair neutral">Pending</span>

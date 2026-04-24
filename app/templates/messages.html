@@ -36,7 +36,7 @@
         </div>
         {% if c.last_message %}
         <div style="font-family:var(--font-m);font-size:10px;color:var(--text3);flex-shrink:0;">
-          {{ c.last_message.created_at.strftime('%b %d') if c.last_message.created_at else '' }}
+          {% if c.last_message.created_at %}<span class="local-time" data-timestamp="{{ c.last_message.created_at.isoformat() }}" data-format="%b %d"></span>{% else %}{% endif %}
         </div>
         {% endif %}
       </a>
@@ -71,7 +71,7 @@
           </div>
           {% if c.last_message %}
           <div style="font-family:var(--font-m);font-size:10px;color:var(--text3);">
-            {{ c.last_message.created_at.strftime('%b %d') if c.last_message.created_at else '' }}
+            {% if c.last_message.created_at %}<span class="local-time" data-timestamp="{{ c.last_message.created_at.isoformat() }}" data-format="%b %d"></span>{% else %}{% endif %}
           </div>
           {% endif %}
         </a>

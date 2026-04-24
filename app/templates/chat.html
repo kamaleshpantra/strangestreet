@@ -117,7 +117,7 @@
             </a>
           {% endif %}
         {% endif %}
-        <div class="msg-time">{{ msg.created_at.strftime('%I:%M %p · %b %d') if msg.created_at else '' }}</div>
+        <div class="msg-time">{% if msg.created_at %}<span class="local-time" data-timestamp="{{ msg.created_at.isoformat() }}" data-format="%I:%M %p · %b %d"></span>{% else %}{% endif %}</div>
       </div>
       {% endfor %}
     {% else %}

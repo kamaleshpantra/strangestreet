@@ -73,7 +73,7 @@
                   <strong>{{ post.author.display_name }}</strong>
                   <span style="color:var(--text3);font-size:11px;">u/{{ post.author.username }}</span>
                 </a>
-                <span class="post-time">{{ post.created_at.strftime('%b %d') if post.created_at else '' }}</span>
+                <span class="post-time">{% if post.created_at %}<span class="local-time" data-timestamp="{{ post.created_at.isoformat() }}" data-format="%b %d"></span>{% else %}{% endif %}</span>
                 {% if post.zone %}
                 <span class="flair purple">z/{{ post.zone.name }}</span>
                 {% endif %}
