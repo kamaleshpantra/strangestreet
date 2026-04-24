@@ -7,7 +7,7 @@
       <button class="v-btn upvote {% if liked %}active{% endif %}" onclick="likePost({{ post.id }},this)" title="Upvote" style="padding:4px; color:var(--text3); border-radius:4px; transition:color 0.2s, background 0.2s;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
       </button>
-      <span class="v-count" id="score-{{ post.id }}" style="font-size:12px; font-weight:700; color:var(--text);">{{ upvotes - downvotes }}</span>
+      <span class="v-count" id="score-{{ post.id }}" style="font-size:12px; font-weight:700; color:var(--text);">{{ post.liked_by|length - (post.disliked_by|length if post.disliked_by else 0) }}</span>
       <button class="v-btn downvote {% if disliked %}active{% endif %}" onclick="dislikePost({{ post.id }},this)" title="Downvote" style="padding:4px; color:var(--text3); border-radius:4px; transition:color 0.2s, background 0.2s;">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
       </button>
@@ -148,11 +148,15 @@
                 <!-- Comment Reactions -->
                 {% if c.reactions %}
                   <div style="display:flex; gap:4px; align-items:center;">
-                    {% set c_reaction_map = {} %}
+                    {% set c_counts = {} %}
                     {% for r in c.reactions %}
-                      {% set _ = c_reaction_map.__setitem__(r.type, c_reaction_map.get(r.type, 0) + 1) %}
+                      {% if r.type not in c_counts %}
+                        {% set _ = c_counts.update({r.type: 1}) %}
+                      {% else %}
+                        {% set _ = c_counts.update({r.type: c_counts[r.type] + 1}) %}
+                      {% endif %}
                     {% endfor %}
-                    {% for rtype, count in c_reaction_map.items() %}
+                    {% for rtype, count in c_counts.items() %}
                       {% set c_user_reacted = user and c.reactions|selectattr('user_id', 'equalto', user.id)|selectattr('type', 'equalto', rtype)|list %}
                       <button class="reaction-btn {% if c_user_reacted %}active{% endif %}" onclick="reactComment({{ post.id }}, {{ c.id }}, '{{ rtype }}')" style="padding:2px 6px; font-size:12px; background:var(--bg3); border-radius:12px; border:1px solid {% if c_user_reacted %}var(--red2){% else %}transparent{% endif %}; cursor:pointer;">
                         {{ {'fire':'🔥','love':'❤️','laugh':'😂','mind_blown':'🤯','clap':'👏','dead':'💀'}.get(rtype, '🔥') }} {{ count }}
@@ -208,6 +212,21 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+  window.toggleReplyForm = function(id) {
+    const f = document.getElementById('reply-form-'+id);
+    if(!f) return;
+    f.style.display = f.style.display === 'none' ? 'flex' : 'none';
+    if(f.style.display === 'flex') f.querySelector('input[name="content"]').focus();
+  }
+  
+  window.toggleCReactions = function(id) {
+    const r = document.getElementById('cr-'+id);
+    if(!r) return;
+    r.style.display = r.style.display === 'none' ? 'flex' : 'none';
+  }
+</script>
+
 <script type="module">
   import { likePost, dislikePost, reactPost, bookmarkPost, votePoll, deletePost, likeComment, dislikeComment, reactComment, deleteComment } from '/static/js/feed.js';
   window.likePost = likePost;
@@ -220,16 +239,5 @@
   window.dislikeComment = dislikeComment;
   window.reactComment = reactComment;
   window.deleteComment = deleteComment;
-  
-  window.toggleReplyForm = function(id) {
-    const f = document.getElementById('reply-form-'+id);
-    f.style.display = f.style.display === 'none' ? 'flex' : 'none';
-    if(f.style.display === 'flex') f.querySelector('input[name="content"]').focus();
-  }
-  
-  window.toggleCReactions = function(id) {
-    const r = document.getElementById('cr-'+id);
-    r.style.display = r.style.display === 'none' ? 'flex' : 'none';
-  }
 </script>
 {% endblock %}
