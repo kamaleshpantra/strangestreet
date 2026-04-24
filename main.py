@@ -33,6 +33,17 @@ async def lifespan(app: FastAPI):
         logger.info("Alembic migrations applied successfully")
     except Exception as e:
         logger.error(f"Alembic migration failed: {e}")
+        # FALLBACK: Manually ensure the column exists if Alembic fails
+        try:
+            from sqlalchemy import text
+            db = SessionLocal()
+            # PostgreSQL syntax to add column if it doesn't exist
+            db.execute(text("ALTER TABLE comments ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"))
+            db.commit()
+            db.close()
+            logger.info("Fallback: Manual column check/add successful")
+        except Exception as ex:
+            logger.error(f"Fallback manual column add failed: {ex}")
 
     # Create any tables not yet tracked by Alembic (safe no-op if already exists)
     Base.metadata.create_all(bind=engine)
