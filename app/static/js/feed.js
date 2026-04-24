@@ -1,4 +1,5 @@
 // app/static/js/feed.js
+console.log("Feed JS Module Loaded");
 
 export async function likePost(id, btn) {
   try {
