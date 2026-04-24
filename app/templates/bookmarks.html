@@ -18,7 +18,7 @@
             {% endif %}
             <strong>{{ post.author.display_name }}</strong>
           </a>
-          <span class="post-time">{{ post.created_at.strftime('%b %d') if post.created_at else '' }}</span>
+          <span class="post-time">{% if post.created_at %}<span class="local-time" data-timestamp="{{ post.created_at.isoformat() }}" data-format="%b %d"></span>{% else %}{% endif %}</span>
         </div>
         <div class="post-title"><a href="/posts/{{ post.id }}">{{ post.content[:120] }}{% if post.content|length > 120 %}…{% endif %}</a></div>
       </div>

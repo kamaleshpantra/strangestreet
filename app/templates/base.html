@@ -237,6 +237,69 @@
     initCrypto('{{ user.username }}');
   </script>
   {% endif %}
+
+  <script>
+    function formatLocalTime() {
+      const els = document.querySelectorAll('.local-time:not([data-processed="true"])');
+      els.forEach(el => {
+        let ts = el.getAttribute('data-timestamp');
+        const fmt = el.getAttribute('data-format');
+        if (!ts) return;
+        
+        // If it lacks timezone information, assume UTC
+        if (!ts.endsWith('Z') && !ts.includes('+') && ts.split('T')[1] && !ts.split('T')[1].includes('-')) {
+          ts += 'Z';
+        }
+        
+        const d = new Date(ts);
+        if (isNaN(d)) return;
+
+        const monthsShort = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const monthsLong = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        
+        let hours = d.getHours();
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        const hours12 = hours % 12 || 12;
+        const mins = d.getMinutes().toString().padStart(2, '0');
+        const hours24 = hours.toString().padStart(2, '0');
+
+        let res = fmt;
+        res = res.replace('%b', monthsShort[d.getMonth()]);
+        res = res.replace('%B', monthsLong[d.getMonth()]);
+        res = res.replace('%d', d.getDate());
+        res = res.replace('%Y', d.getFullYear());
+        res = res.replace('%I', hours12.toString().padStart(2, '0'));
+        res = res.replace('%H', hours24);
+        res = res.replace('%M', mins);
+        res = res.replace('%p', ampm);
+        
+        // Append local timezone abbreviation (e.g. IST, EST, etc.)
+        try {
+          const tzStr = d.toLocaleTimeString('en-us', {timeZoneName:'short'}).split(' ')[2];
+          if (tzStr) res += ' ' + tzStr;
+        } catch(e) {}
+        
+        el.textContent = res;
+        el.setAttribute('data-processed', 'true');
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', formatLocalTime);
+    formatLocalTime();
+
+    const observer = new MutationObserver((mutations) => {
+      let shouldFormat = false;
+      for (const m of mutations) {
+        if (m.addedNodes.length > 0) {
+          shouldFormat = true;
+          break;
+        }
+      }
+      if (shouldFormat) formatLocalTime();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  </script>
+
   {% block scripts %}{% endblock %}
 </body>
 

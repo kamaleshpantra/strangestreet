@@ -27,7 +27,7 @@
           {{ n.message or n.type.replace('_',' ').title() }}
         </div>
         <div style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--font-m);">
-          {{ n.created_at.strftime('%b %d, %I:%M %p') if n.created_at else '' }}
+          {% if n.created_at %}<span class="local-time" data-timestamp="{{ n.created_at.isoformat() }}" data-format="%b %d, %I:%M %p"></span>{% else %}{% endif %}
         </div>
       </div>
       {% if n.reference_type == 'post' %}

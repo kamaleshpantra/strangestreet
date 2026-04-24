@@ -78,7 +78,7 @@
               {% endif %}
               <strong>{{ post.author.display_name }}</strong>
             </a>
-            <span class="post-time">{{ post.created_at.strftime('%b %d') if post.created_at else '' }}</span>
+            <span class="post-time">{% if post.created_at %}<span class="local-time" data-timestamp="{{ post.created_at.isoformat() }}" data-format="%b %d"></span>{% else %}{% endif %}</span>
             {% if post.is_pinned %}<span class="flair gold" style="font-size:9px;">📌 Pinned</span>{% endif %}
             {% if post.flair %}<span class="flair" style="font-size:9px;background:{{ post.flair.color_hex }}22;color:{{ post.flair.color_hex }};border:1px solid {{ post.flair.color_hex }}44;">{{ post.flair.name }}</span>{% endif %}
           </div>
@@ -216,7 +216,7 @@
       <div class="sw-head">About</div>
       <div class="sw-body">
         <div style="font-size:12px;color:var(--text3);line-height:1.6;">
-          Created {{ zone.created_at.strftime('%B %Y') if zone.created_at else '' }}<br>
+          Created {% if zone.created_at %}<span class="local-time" data-timestamp="{{ zone.created_at.isoformat() }}" data-format="%B %Y"></span>{% else %}{% endif %}<br>
           Type: {{ zone.zone_type }}
         </div>
       </div>

@@ -105,7 +105,7 @@
               {% endif %}
             </td>
             <td style="padding:10px 8px;color:var(--text3);font-size:11px;">{{ run.triggered_by or 'manual' }}</td>
-            <td style="padding:10px 8px;color:var(--text3);font-size:11px;">{{ run.started_at.strftime('%b %d %H:%M') if run.started_at else '-' }}</td>
+            <td style="padding:10px 8px;color:var(--text3);font-size:11px;">{% if run.started_at %}<span class="local-time" data-timestamp="{{ run.started_at.isoformat() }}" data-format="%b %d %H:%M"></span>{% else %}-{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>
