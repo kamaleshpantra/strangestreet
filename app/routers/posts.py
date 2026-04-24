@@ -379,3 +379,17 @@ def react_to_comment(post_id: int, comment_id: int, reaction_type: str, request:
         counts[r.type] = counts.get(r.type, 0) + 1
     return JSONResponse({"removed": False, "type": reaction_type, "counts": counts})
 
+
+@router.post("/comment/{comment_id}/delete")
+def delete_comment(comment_id: int, request: Request, db: Session = Depends(get_db)):
+    """Soft-delete a comment. Content is hidden but replies remain intact (Reddit-style)."""
+    user = require_login(request, db)
+    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    if not comment:
+        raise HTTPException(status_code=404, detail="Comment not found")
+    if comment.user_id != user.id:
+        raise HTTPException(status_code=403, detail="You can only delete your own comments")
+
+    comment.is_deleted = True
+    db.commit()
+    return JSONResponse({"success": True})

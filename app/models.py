@@ -176,6 +176,7 @@ class Comment(Base):
     post_id    = Column(Integer, ForeignKey("posts.id"), nullable=False, index=True)
     parent_id  = Column(Integer, ForeignKey("comments.id", ondelete="CASCADE"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    is_deleted = Column(Boolean, default=False, nullable=False)
 
     author = relationship("User", back_populates="comments")
     post   = relationship("Post", back_populates="comments")
