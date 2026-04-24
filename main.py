@@ -24,7 +24,17 @@ from app.logging_config import logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all database tables on startup (safe for dev; use Alembic for production migrations)
+    # ── Run pending Alembic migrations on every startup ──────────────────────
+    try:
+        from alembic.config import Config
+        from alembic import command
+        alembic_cfg = Config("alembic.ini")
+        command.upgrade(alembic_cfg, "head")
+        logger.info("Alembic migrations applied successfully")
+    except Exception as e:
+        logger.error(f"Alembic migration failed: {e}")
+
+    # Create any tables not yet tracked by Alembic (safe no-op if already exists)
     Base.metadata.create_all(bind=engine)
 
     logger.info("Database tables verified/created")
