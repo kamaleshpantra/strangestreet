@@ -128,6 +128,36 @@ export async function deletePost(id) {
 }
 window.deletePost = deletePost;
 
+export async function deleteComment(commentId) {
+  if (!confirm('Delete your comment? Replies will remain.')) return;
+  try {
+    const r = await fetch(`/posts/comment/${commentId}/delete`, { method: 'POST' });
+    if (r.ok) {
+      // Instantly replace the comment with the deleted placeholder (no full reload needed)
+      const el = document.getElementById('comment-' + commentId);
+      if (el) {
+        // Keep only the first child (the comment div itself), remove action content
+        const placeholder = document.createElement('div');
+        placeholder.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px;opacity:0.45;';
+        placeholder.innerHTML = '<div class="av" style="width:24px;height:24px;font-size:9px;">?</div><em style="font-size:13px;color:var(--text3);">[deleted by user]</em>';
+        const removedMsg = document.createElement('div');
+        removedMsg.style.cssText = 'font-size:13px;color:var(--text3);padding-left:30px;font-style:italic;';
+        removedMsg.textContent = 'This comment has been removed.';
+        // Clear inner html except for nested replies div
+        const repliesDiv = el.querySelector(':scope > div[id^="comment-"]')?.parentElement;
+        el.innerHTML = '';
+        el.appendChild(placeholder);
+        el.appendChild(removedMsg);
+        if (repliesDiv) el.appendChild(repliesDiv);
+      }
+    } else {
+      const d = await r.json();
+      alert(d.detail || 'Failed to delete comment');
+    }
+  } catch(e) { console.error('Delete comment failed:', e); }
+}
+window.deleteComment = deleteComment;
+
 
 // Utility layout operations hook
 export function initFeed() {
