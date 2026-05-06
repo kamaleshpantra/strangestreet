@@ -111,7 +111,7 @@ app.mount("/static", StaticFiles(directory="app/static"), name="static")
 # ── Health Check ──────────────────────────────────────────────────────────────
 @app.get("/health", tags=["system"])
 def health_check():
-    """Health check endpoint for Render/Docker monitoring."""
+    """Health check endpoint for infrastructure monitoring."""
     return JSONResponse({"status": "ok", "app": settings.APP_NAME})
 
 
