@@ -33,18 +33,8 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: DEBUG
+        value: "false"
+      - key: DISABLE_ML_MODEL
+        value: "true"
 
-  - type: cron
-    name: strangestreet-ml-pipeline
-    plan: free
-    runtime: python
-    schedule: "0 * * * *" # Runs at minute 0 past every hour
-    buildCommand: pip install -r requirements.txt
-    startCommand: python ml/run_pipeline.py
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: strangestreet-db
-          property: connectionString
-      - key: PYTHON_VERSION
-        value: 3.11.9

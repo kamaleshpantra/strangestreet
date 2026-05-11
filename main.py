@@ -24,35 +24,14 @@ from app.logging_config import logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # ── Run pending Alembic migrations on every startup ──────────────────────
-    print(">>> [DB] STARTING MIGRATIONS...")
+    # ── Database Initialization ─────────────────────────────────────────────
+    # Note: Alembic migrations are handled by start_render.sh for production.
+    # We keep Base.metadata.create_all as a safety measure for local dev.
     try:
-        from alembic.config import Config
-        from alembic import command
-        alembic_cfg = Config("alembic.ini")
-        command.upgrade(alembic_cfg, "head")
-        logger.info("Alembic migrations applied successfully")
-        print(">>> [DB] ALEMBIC SUCCESS")
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables verified/created")
     except Exception as e:
-        logger.error(f"Alembic migration failed: {e}")
-        print(f">>> [DB] ALEMBIC FAILED: {e}")
-        # FALLBACK: Manually ensure the column exists if Alembic fails
-        try:
-            from sqlalchemy import text
-            with engine.connect() as conn:
-                # PostgreSQL syntax to add column if it doesn't exist
-                conn.execute(text("ALTER TABLE comments ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"))
-                conn.commit()
-            logger.info("Fallback: Manual column check/add successful")
-            print(">>> [DB] FALLBACK SUCCESS")
-        except Exception as ex:
-            logger.error(f"Fallback manual column add failed: {ex}")
-            print(f">>> [DB] FALLBACK FAILED: {ex}")
-
-    # Create any tables not yet tracked by Alembic
-    Base.metadata.create_all(bind=engine)
-
-    logger.info("Database tables verified/created")
+        logger.error(f"Database table verification failed: {e}")
 
     # Ensure upload directories exist
     for d in ["app/static/uploads/posts", "app/static/uploads/avatars",

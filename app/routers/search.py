@@ -101,6 +101,8 @@ def unified_search(
         # 2. Semantic search
         try:
             q_vec = MLService.encode_query(q)
+            if q_vec is None:
+                raise ValueError("ML model disabled")
             # Load post features (vectors)
             features = db.query(PostFeature).all()
             

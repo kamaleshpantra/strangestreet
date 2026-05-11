@@ -32,5 +32,8 @@ ENV PYTHONUNBUFFERED=1
 # Render injects PORT at runtime (default 10000)
 EXPOSE 10000
 
-# Run the application — Render sets $PORT automatically
-CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-10000}
+# Ensure start script is executable
+RUN chmod +x start_render.sh
+
+# Run the application via the start script
+CMD ["./start_render.sh"]
