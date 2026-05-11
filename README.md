@@ -1,7 +1,3 @@
-<p align="center">
-  <img src="assets/banner.png" alt="Strange Street Banner" width="100%">
-</p>
-
 <h1 align="center">🌆 Strange Street</h1>
 
 <p align="center">
