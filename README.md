@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi" alt="FastAPI">
   <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql" alt="PostgreSQL">
   <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Sentence--BERT-FF6F00?style=for-the-badge" alt="SBERT">
   <img src="https://img.shields.io/badge/Machine_Learning-FF6F00?style=for-the-badge&logo=scikit-learn&logoColor=white" alt="ML">
   <img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render">
 </p>
@@ -55,7 +56,7 @@ A multi-stage background engine that powers the platform's "brain":
 - **Machine Learning**: 
   - `Scikit-learn`: Feature extraction, NMF, SVD
   - `NetworkX`: Graph algorithms (PageRank, FoF)
-  - `Sentence-Transformers`: `all-MiniLM-L6-v2` for semantic search
+  - `Sentence-Transformers`: **Sentence-BERT** (`all-MiniLM-L6-v2`) for semantic search
 - **Task Scheduling**: Integrated cron jobs for ML pipeline runs
 - **Storage**: [Cloudinary](https://cloudinary.com/) for media persistence
 - **Frontend**: Jinja2 Templates, Vanilla JS, and modern CSS (Glassmorphism theme)
