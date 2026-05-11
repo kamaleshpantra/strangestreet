@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: strangestreet_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: strangestreet
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d strangestreet"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: strangestreet_web
+    ports:
+      - "10000:10000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/strangestreet
+      - DEBUG=true
+      - SECRET_KEY=development-secret-key-32-chars-long-or-more
+      - ENCRYPTION_KEY=b'v87_v_L-p3-Uf-2L2W6f9h7XyX8M5yU6vY3R5_z4S9Y='
+      - PORT=10000
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/code
+      - static_uploads:/code/app/static/uploads
+
+volumes:
+  postgres_data:
+  static_uploads:

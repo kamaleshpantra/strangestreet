@@ -13,6 +13,12 @@
   <img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render">
 </p>
 
+<p align="center">
+  <a href="https://github.com/kamaleshpantra/strangestreet/actions/workflows/ci.yml">
+    <img src="https://github.com/kamaleshpantra/strangestreet/actions/workflows/ci.yml/badge.svg" alt="CI Status">
+  </a>
+</p>
+
 ---
 
 ## 🌟 Overview
@@ -131,6 +137,18 @@ graph TD
 uvicorn main:app --reload
 ```
 
+### 🐳 Quick Start with Docker
+
+Run the entire stack (App + PostgreSQL) in seconds:
+
+```bash
+docker compose up --build
+```
+
+The application will be available at `http://localhost:10000`.
+
+---
+
 ---
 
 ## 🧠 ML Pipeline Management
@@ -164,3 +182,12 @@ This project is optimized for [Render](https://render.com/).
 <p align="center">
   Built with ❤️ for the future of social intelligence.
 </p>
+
+---
+
+## 🧠 The Learning Journey
+
+**Strange Street** was built as an exploration into high-performance web systems and applied Machine Learning. Key learning milestones included:
+- **Scalable ML**: Implementing Sentence-BERT and Graph algorithms that run efficiently on constrained resources.
+- **Privacy Design**: Building the "Progressive Identity" system to explore the balance between anonymity and trust.
+- **CI/CD Excellence**: Ensuring production reliability through automated testing and Dockerized deployments.
