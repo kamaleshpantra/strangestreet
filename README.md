@@ -37,8 +37,9 @@ Connections start with mystery. Users interact via aliases, and as trust grows t
 ### 🧠 ML Intelligence Pipeline
 A multi-stage background engine that powers the platform's "brain":
 - **Graph Engine**: Computes **PageRank** for user influence and **Louvain Communities** for grouping.
-- **Topic Modeling**: Uses **NMF (Non-negative Matrix Factorization)** to extract interests from posts and profile bios.
+- **Topic Modeling**: Uses **Sentence-BERT (SBERT)** and **NMF** to extract semantic interests from posts and profiles.
 - **Recommendation Engine**: **SVD-based** scoring for personalized feeds and "People You Should Know."
+- **Reinforcement Learning**: Real-time feed re-ranking using the **UCB1 (Upper Confidence Bound)** Multi-Armed Bandit algorithm to balance exploration and exploitation.
 - **Safety Module**: Real-time toxicity detection and automated flagging to maintain community standards.
 
 ### 🏢 Zones & Economy
@@ -74,13 +75,16 @@ graph TD
     subgraph "ML Intelligence Pipeline"
         ML[Orchestrator] -->|Reads| DB
         ML --> Graph[Graph Engine: PageRank/Louvain]
-        ML --> NLP[Feature Engine: TF-IDF/NMF]
+        ML --> NLP[Feature Engine: SBERT/NMF]
         ML --> Rec[Recommender: SVD/Scoring]
         ML --> Safety[Safety: Toxicity Flags]
         Graph -->|Writes Features| DB
         NLP -->|Writes Topics| DB
         Rec -->|Writes Scores| DB
     end
+
+    Web -->|Real-time Ranking| Bandit[Bandit Engine: UCB1]
+    Bandit -->|Personalized Feed| User
     
     Web -->|Media| Cloud[Cloudinary]
 ```
