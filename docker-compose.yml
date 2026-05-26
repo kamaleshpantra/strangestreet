@@ -6,7 +6,7 @@ services:
     container_name: strangestreet_db
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: strangestreet
     ports:
       - "5432:5432"
@@ -23,11 +23,10 @@ services:
     container_name: strangestreet_web
     ports:
       - "10000:10000"
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/strangestreet
-      - DEBUG=true
-      - SECRET_KEY=development-secret-key-32-chars-long-or-more
-      - ENCRYPTION_KEY=b'v87_v_L-p3-Uf-2L2W6f9h7XyX8M5yU6vY3R5_z4S9Y='
+      - DATABASE_URL=postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@db:5432/strangestreet
       - PORT=10000
     depends_on:
       db:

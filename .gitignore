@@ -18,17 +18,21 @@ env/
 *.swp
 *.swo
 
-# Environment
+# Environment — NEVER commit secrets
 .env
 .env.sh
+.env.local
+.env.production
 
 # OS
 Thumbs.db
 .DS_Store
+desktop.ini
 
 # Database files (NEVER commit databases)
 *.db
 *.sqlite3
+*.sqlite
 
 # Uploads (generated at runtime)
 app/static/uploads/posts/*
@@ -45,10 +49,21 @@ app/static/uploads/messages/*
 # Dev artifacts
 scratch/
 simulations/
+
+# Generated presentations / documents
 *.pptx
+*.docx
 
 # ML/Simulation
 simulation/
 
 # Test files
 test_*.py
+
+# Logs
+*.log
+logs/
+
+# Byte-compiled / optimized
+*.pyc
+*.pyo
