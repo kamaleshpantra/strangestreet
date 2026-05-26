@@ -31,6 +31,21 @@ class PostService:
             from app.services.cloudinary_service import CloudinaryService
             from config import settings
             
+            # Enforce file size limit
+            max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+            file_size = getattr(media, "size", None)
+            if file_size is None:
+                # Fallback to seek and tell
+                media.file.seek(0, os.SEEK_END)
+                file_size = media.file.tell()
+                media.file.seek(0)
+                
+            if file_size > max_bytes:
+                raise HTTPException(
+                    status_code=413,
+                    detail=f"Uploaded file exceeds the maximum allowed size of {settings.MAX_UPLOAD_SIZE_MB}MB."
+                )
+            
             ext = os.path.splitext(media.filename)[1].lower()
             is_video = ext in VIDEO_EXT
             

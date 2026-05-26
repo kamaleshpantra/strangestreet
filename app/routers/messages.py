@@ -144,6 +144,19 @@ def alias_chat(connection_id: int, request: Request, db: Session = Depends(get_d
 
 
 def handle_msg_upload(media: UploadFile):
+    if media and media.filename:
+        from config import settings
+        max_bytes = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
+        file_size = getattr(media, "size", None)
+        if file_size is None:
+            media.file.seek(0, os.SEEK_END)
+            file_size = media.file.tell()
+            media.file.seek(0)
+        if file_size > max_bytes:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Uploaded file exceeds the maximum allowed size of {settings.MAX_UPLOAD_SIZE_MB}MB."
+            )
     if not media or not media.filename:
         return None, None, None
         

@@ -71,9 +71,10 @@ app = FastAPI(
 )
 
 # ── Middleware ─────────────────────────────────────────────────────────────────
-from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware
+from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, CSRFOriginMiddleware
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(CSRFOriginMiddleware)
 app.add_middleware(
     RateLimitMiddleware,
     requests_per_minute=120,

@@ -80,4 +80,58 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        
+        # Enforce HTTPS (HSTS) - only in production (when debug is false)
+        from config import settings
+        if not settings.DEBUG:
+            response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+            
+        # Content Security Policy (CSP)
+        # Allows local resources, Google Fonts, and Cloudinary for user media
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline'; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' https://res.cloudinary.com data:; "
+            "media-src 'self' https://res.cloudinary.com; "
+            "connect-src 'self';"
+        )
+        return response
+
+
+class CSRFOriginMiddleware(BaseHTTPMiddleware):
+    """
+    Automatic CSRF protection via strict Origin/Referer verification.
+    Guarantees state-changing requests (POST, DELETE, etc.) come from this application.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "DELETE", "PATCH"):
+            # Get request host
+            host = request.headers.get("host")
+            
+            # Check Origin and Referer headers
+            origin = request.headers.get("origin")
+            referer = request.headers.get("referer")
+            
+            source = None
+            if origin:
+                # Remove protocol to compare host only
+                source = origin.replace("http://", "").replace("https://", "")
+            elif referer:
+                # Remove protocol and path to compare host only
+                source = referer.replace("http://", "").replace("https://", "").split("/")[0]
+                
+            # If both are missing or the source doesn't match our host, reject
+            if not source or source != host:
+                logger.warning(
+                    f"CSRF Blocked: Source '{source}' does not match host '{host}' on {request.method} {request.url.path}"
+                )
+                return JSONResponse(
+                    {"detail": "CSRF verification failed. Request origin untrusted."},
+                    status_code=status.HTTP_403_FORBIDDEN,
+                )
+                
+        response = await call_next(request)
         return response
